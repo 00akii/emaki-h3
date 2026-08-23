@@ -1,0 +1,196 @@
+name: バグ報告 / Bug report
+description: 動かない・落ちる・結果がおかしい / Something is broken, crashes, or produces wrong output
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        日本語でも英語でもかまいません。/ Japanese or English is fine.
+
+        **環境の欄は必須です。** このアプリの数値（速度・VRAM・尺の上限）はすべて
+        **RTX 4090 24GB / Windows 11 Pro / ComfyUI 0.33.1（`--reserve-vram` なし）** 1台の実測です。
+        環境が違えば所要時間も挙動も変わるので、環境が書かれていない報告は再現できません。
+
+        All measured numbers in this project come from a single machine
+        (RTX 4090 24GB / Windows 11 Pro / ComfyUI 0.33.1, no `--reserve-vram`).
+        Without your environment we cannot reproduce anything.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 何が起きたか / What happened
+      description: エラーメッセージは**要約せずそのまま**貼ってください。
+      placeholder: |
+        「本番生成」を押すと進捗ログに ... と出たまま進まない
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順 / Steps to reproduce
+      description: どの画面で、どういう状態で、どのボタンを押したか。
+      placeholder: |
+        1. 作品「...」を開く
+        2. 参照画像を 2 枚選ぶ
+        3. 「プレビュー生成」を押す
+        4. 進捗ログの step 1 が ... 秒かかる
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待した動作 / What you expected
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: どこで起きたか / Which part
+      options:
+        - プロンプト生成（LLM） / Prompt generation (LLM)
+        - 生成（ComfyUI） / Rendering (ComfyUI)
+        - 切り抜き（SAM3） / Cutout (SAM3)
+        - 結果の検査（ffmpeg） / Inspection (ffmpeg)
+        - Eagle 連携 / Eagle
+        - 設定・起動 / Setup and startup
+        - その他・わからない / Other or not sure
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 「遅い」報告のときは、先にこの 3 つを確認してください
+
+        遅い症状には**既知の原因が 3 つ**あり、いずれも**アプリのバグではなく環境側の状態**です。
+        該当していればここで解決します。詳しくは README の「踏んだ罠（実測）」。
+
+        If your report is "it's slow", please check these three known causes first
+        — all three are environment state, not application bugs.
+
+  - type: checkboxes
+    id: slow-triage
+    attributes:
+      label: 遅い症状のときの事前確認 / Pre-flight checks for "it's slow"
+      description: 遅い症状ではない報告では、ここは空のままでかまいません。
+      options:
+        - label: >-
+            **(a) LM Studio の実効 ctx を確認した。** `lms ps` の contextLength が意図した値（例 16384）になっている。
+            モデルの「既定設定」ファイル（`~/.lmstudio/.internal/user-concrete-model-default-config/.../<file>.gguf.json` の
+            `contextLength`）に大きな値が残っていると、`lms load --context-length` は**無視される**。
+            実測: 98304 が残っていてプロンプト生成が 16 秒 → 215 秒。
+        - label: >-
+            **(b) ComfyUI の VRAM ローダーを疑った。** step 1 が数百秒かかるならこれが典型。
+            ComfyUI 0.33 の動的 VRAM ローダーは、空き VRAM が UNET より多いと全部載せようとして毎ブロック重みを出し入れする
+            （**空きが多いほど遅い**という逆転。実測: 空き 17.7GB で step1 15 秒 / 空き 20.4GB で 606 秒）。
+            進捗ログの step 1 の秒数を下の「ログ」欄に貼った。
+        - label: >-
+            **(c) LLM が GPU に載りきっているか確認した。** ComfyUI が VRAM を抱えたまま LM Studio を載せると
+            **一部が CPU に残る**。`lms ps` の SIZE は満額を表示するので**見た目では分からない**
+            （実測: プロンプト生成 45 秒 → 218 秒）。**あとから ComfyUI を空けても直りません**（載せ直しが要る）。
+            ComfyUI を止めてから LM Studio を載せ直して、速くなるかを試した。
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 環境（必須） / Environment (required)
+
+  - type: input
+    id: version
+    attributes:
+      label: H3 Studio のバージョン / H3 Studio version
+      description: "`h3studio/__init__.py` の `__version__`、または `git rev-parse --short HEAD` の値。"
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU と VRAM 容量 / GPU and VRAM size
+      description: 型番と**容量**。`nvidia-smi` の該当行の貼り付けでも可。
+      placeholder: "NVIDIA RTX 4090 24GB"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "Windows 11 Pro 24H2 / Ubuntu 24.04 / macOS 15.1"
+    validations:
+      required: true
+
+  - type: input
+    id: comfyui
+    attributes:
+      label: ComfyUI のバージョンと起動引数 / ComfyUI version and launch args
+      description: >-
+        **`--reserve-vram` を付けているかどうかを必ず書いてください。**
+        付けると VRAM ローダーの挙動が変わります（このプロジェクトでは**未検証**なので、
+        付けている環境からの報告は特に貴重です）。アプリの「設定」画面にも表示されます。
+      placeholder: "0.33.1 / --reserve-vram なし"
+    validations:
+      required: true
+
+  - type: textarea
+    id: lms
+    attributes:
+      label: LM Studio のモデルと `lms ps` の出力 / LM Studio model and `lms ps` output
+      description: >-
+        `lms ps` の出力を**そのまま**貼ってください（モデル名・SIZE・**contextLength** の 3 つが要ります）。
+        クラウド LLM を使っている場合はプロバイダとモデル名を、LLM をまったく使っていない場合は「未使用」と書いてください。
+        例: `Identifier: qwen3.6-27b-...@q4_k_s` / `SIZE: 17.16 GB` / `CONTEXT: 16384`
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: nodes
+    attributes:
+      label: ComfyUI 側のノード / ComfyUI nodes present
+      description: アプリの「設定」→ **N の欄**に一覧が出ます。入っているものにチェックを入れてください。
+      options:
+        - label: "`VHS_VideoCombine` / `VHS_LoadVideo`（ComfyUI-VideoHelperSuite）"
+        - label: "`LayerUtility: PurgeVRAM V2`（ComfyUI-LayerStyle）"
+        - label: "`SAM3_Detect`（ComfyUI 本体）"
+        - label: "`DisplayAny`（ComfyUI-Easy-Use など）"
+        - label: "「設定」→ **W の欄**が全部緑（ワークフロー JSON の重みがその環境に実在する）"
+
+  - type: input
+    id: python
+    attributes:
+      label: Python のバージョン / Python version
+      placeholder: "3.10.11"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ / Logs
+      description: |
+        貼れるものを貼ってください。**貼る前に、ローカルのパス・API キー・作品名など出したくないものが混ざっていないか確認してください。**
+
+        - 画面の「進捗ログ」（**step 1 の秒数**が入っているもの）
+        - `server.log` / `server.err.log` の該当箇所
+        - ComfyUI 側のコンソール出力
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 確認 / Confirmation
+      options:
+        - label: >-
+            README の「踏んだ罠（実測）」と「既知の制限」を読み、そこに**既知の挙動として書かれているものではない**ことを確認した
+            （尺 10 秒の上限 / JIS 第2水準・異体字が別の字になる / 切り抜きはテキスト検出のみ / `check_cut` のかたまり数 など）
+          required: true

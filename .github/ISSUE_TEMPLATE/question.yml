@@ -1,0 +1,40 @@
+name: 質問 / Question
+description: 使い方・設定・環境について聞く / Ask about usage, configuration, or environment
+title: "[question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        日本語でも英語でもかまいません。/ Japanese or English is fine.
+
+        先に README を見てください。よくあるものはここに書いてあります:
+
+        - **必要なもの / ComfyUI 側のノード** — 何が無いと何ができないか（アプリの「設定」→ N・W の欄が自動で診断します）
+        - **踏んだ罠（実測）** — 遅い・落ちる系の既知の原因
+        - **既知の制限** — 尺 10 秒 / 画面内の文字 / 切り抜きの制約
+        - **動作確認済み環境** — 数値がどの環境の実測かの明記
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 聞きたいこと / Your question
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: 試したこと / What you already tried
+      description: README のどこを読んだか、何を試してどうなったか。
+    validations:
+      required: false
+
+  - type: input
+    id: env
+    attributes:
+      label: 環境（分かる範囲で） / Environment, if relevant
+      description: 環境によって答えが変わる質問（速度・VRAM・ノード）では必ず書いてください。
+      placeholder: "RTX 4090 24GB / Windows 11 / ComfyUI 0.33.1 / LM Studio qwen3.6-27b@q4_k_s ctx 16384"
+    validations:
+      required: false

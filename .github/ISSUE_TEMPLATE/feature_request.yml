@@ -1,0 +1,34 @@
+name: 機能要望 / Feature request
+description: 足りない機能・こうしたい / Something missing, or a change you'd like
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        日本語でも英語でもかまいません。/ Japanese or English is fine.
+
+        README の「既知の制限」に、**意図的に入れていないもの**が書いてあります。先に一度見てください。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 何に困っているか / What problem are you hitting
+      description: 解決策ではなく、**困っている状況**を書いてください。そのほうが良い解決策が出ます。
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: こうなってほしい / What you'd like instead
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: いまの回避策 / Current workaround
+      description: 手作業で回しているなら、その手順。
+    validations:
+      required: false
