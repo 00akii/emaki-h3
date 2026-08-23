@@ -1,0 +1,230 @@
+# H3 Studio
+
+ローカル LLM で MiniMax-H3 の構造化プロンプトを書き、ComfyUI で生成し、結果を確認するまでを1画面でやる Web アプリ。
+
+English: [README.en.md](README.en.md)
+
+**元イラスト → 切り抜き → 参照画像 → ブリーフ → プロンプト → プレビュー生成 → 本番生成 → 採用・記録** が1画面で完結します。
+
+作品の管理 / 参照素材の選択 / ブリーフ（おまかせ・推奨・詳細）→ プロンプト生成（自動修復つき）→ 機械検査 → 編集・再検査 → `プロンプト.txt` とアーカイブへ書き出し / 履歴からの呼び出し / モデル選択（実測の合格率つき）/ クラウド LLM 切替と課金の警告 / プレビュー生成（608×352）・本番生成（1344×768）の ComfyUI 投入・進捗・中止 / 結果の検査（コンタクトシート・計測値）/ 採用→アーカイブと作品への記録 / 過去のジョブ一覧 / SAM3 の切り抜き（threshold スイープ→検出→誰を残すか→プレビュー→検査→保存）/ Eagle 連携。
+
+---
+
+## 必要なもの
+
+| | |
+|---|---|
+| **ComfyUI** | 0.33 以降（`MiniMaxH3ReferenceToVideo` と `SAM3_Detect` が本体に入ったバージョン）。既定 `http://127.0.0.1:8189` |
+| **MiniMax-H3 の重み** | UNET / Turbo LoRA / テキストエンコーダ / 映像 VAE / 音声 VAE。**ライセンスの都合で同梱しません**（下記「公開にあたって」） |
+| **H3 のワークフロー JSON** | ComfyUI で一度動かして保存したもの。アプリはここからモデル名・サンプラー・出力形式だけを読む |
+| **Python** | 3.10 以降。`fastapi` `uvicorn` |
+| **ffmpeg** | PATH に通っていること（結果の検査に使う） |
+| **LM Studio**（任意） | ローカルでプロンプトを書かせる場合。既定 `http://localhost:1234`。CLI `lms` も使う。クラウド LLM を使うなら不要 |
+| **Eagle**（任意） | 出来上がりを登録する場合 |
+
+### ComfyUI 側のノード
+
+**「設定」→ N の欄**が、いまの ComfyUI に何が足りないかを自動で出します。生成前に一度見てください。
+
+| ノード | 要否 | 無いとどうなるか |
+|---|---|---|
+| `MiniMaxH3ReferenceToVideo` `UNETLoader` `CLIPLoader` `SamplerCustomAdvanced` | **必須** | 生成できません（本体 0.33 以降なら入っています） |
+| `VHS_VideoCombine`（ComfyUI-VideoHelperSuite） | 代替あり | 本体の `CreateVideo` + `SaveVideo` に自動で落ちます。`crf` / `pix_fmt` は指定できなくなります |
+| `VHS_LoadVideo`（同上） | 任意 | **参照動画が使えません**（選んで生成しようとするとその旨を出して止まります）。参照画像だけなら動きます |
+| `SAM3_Detect`（本体） | 任意 | 切り抜き画面が使えません。切り抜き済み画像を `input\` に置けば生成はできます |
+| `DisplayAny`（ComfyUI-Easy-Use など） | 任意 | 本体の `PreviewAny` に自動で落ちます |
+| `LayerUtility: PurgeVRAM V2`（ComfyUI-LayerStyle） | 任意 | `/free` だけになります。**2本目以降が大きく遅くなることがあります**（下記の罠） |
+
+**「設定」→ W の欄**では、ワークフロー JSON から読んだ重みのファイル名がその ComfyUI に実在するかを照合します。環境ごとにファイル名は違うので、赤が出たら ComfyUI で H3 のワークフローを開いて保存し直すか、`config.json` の `workflow_json` をその環境のものに向けてください。
+
+---
+
+## 起動
+
+```bash
+python server.py
+```
+
+→ `http://127.0.0.1:8765` をブラウザで開く。ポートを変えたいときは:
+
+```bash
+python server.py --port 8799
+```
+
+LM Studio と ComfyUI が無くても画面は開き、「設定」に赤で出ます。
+
+## 設定
+
+環境依存は **すべて `config.json`** に外出し（コードにパスは書いていません）。無ければ `config.example.json` が読まれるので、それをコピーして書き換えてください。
+
+| キー | 中身 |
+|---|---|
+| `comfy_url` / `comfy_input_dir` / `comfy_output_dir` | ComfyUI の場所。参照画像は `input\` から読む |
+| `workflow_json` | H3 のワークフロー。モデル名・サンプラー・出力形式の取得元 |
+| `prompt_txt` / `archive_dir` | 書き出し先 |
+| `raw_dir` | 切り抜き前の元イラスト（切り抜き画面の「元イラスト」） |
+| `sam3` | 切り抜きの既定値（`checkpoint` 空なら自動選択 / `text` / `threshold` / `refine`=1 固定 / `crop_margin`） |
+| `lmstudio_url` / `lmstudio_model` / `lmstudio_load` | ローカル LLM。`lmstudio_load` は検証済みの載せ方（ctx 16384 / parallel 1 / MTP） |
+| `llm.backend` | `lmstudio`（既定・無料）か `openai_compat`（クラウド・有料） |
+| `llm.openai_compat` | `base_url` / `model` / `api_key_env`（**鍵は環境変数名で指定、値は config に書かない**） |
+| `llm.pricing` | 任意。`{model: {"in": $/Mtok, "out": $/Mtok}}` を置くと概算料金が出る |
+| `eagle` | Eagle 連携（`enabled` / `url` / `token` / `folder_id` / `auto`=off\|final\|all / `send_contact_sheet` / `extra_tags`） |
+| `gen` | 生成の既定値（プレビュー 608×352 / 本番 1344×768 / 6 step / euler+normal / 上限10秒）。実測で決めた値 |
+
+`config.json` には自分の PC のパス・モデル名・Eagle のトークンが入ります。**`.gitignore` で除外済みなので、公開するときも一緒に出ていきません。**
+
+## 画面の使い方
+
+1. 上部で **作品** を選ぶ（無ければ「＋」）。スタイル宣言・キャラ定義・参照素材は作品に保存される
+2. **ブリーフ** を書く。推奨（4欄）が既定。各欄の `?` で書き方の説明が開く
+   - 場所と時間 / 動き は必須。**開始の構図・カメラ（終端）・画面内の文字・セリフ**は任意
+   - **カメラは「終端」＝どこで止まるか**を書く欄（実測 12/12 で方向どおりに動く）。空欄だと静止ショット。**寄り／引きは開始の構図より、こちらで指定する方が通る**
+   - **開始の構図**は1フレーム目。高さ（目線／ハイ／ロー）と視点（正面／真横／背面）は語を足すだけで効く。
+     **サイズ（寄り）を選ぶと、本文を画角内の要素に絞る修正が自動で入る**（絞らないと本文が勝って指定が黙って無視される・実測 ×9 → ×0）。
+     選んだ組み合わせの判定（そのまま通す／修正が入る／成立しにくい）は欄のすぐ下に出る。**効かないもの（ダッチアングル・真俯瞰・望遠・広角）は選択肢に置いていない**
+   - **画面内の文字**は看板や札に出す文字。`看板に「こんにちは」` の形（カギカッコの中がそのまま出る。前に載せる物を書ける）。
+     **常用漢字・かな・英数は正確に出る**（実測 9/9）。**稀少な漢字・旧字体は「別の実在漢字」に静かに置き換わる**ので、入力時に水準を判定して警告する
+   - **「動き」の区切りは打ちやすいもので構わない。** スペース（半角・全角）／読点「、」／カンマ／ハイフン「-」「－」／改行／矢印「→」のどれでも同じに扱い、LLM には `A → B → C` に揃えて渡す。**どう解釈したかは入力欄のすぐ下に段階として出る**ので、割れ方がおかしければその場で直せる。`3-5歩` のような数値範囲は割らないし、長音「ー」は区切りにしない
+3. **参照素材** を選ぶ（画像9枚・動画3本まで）。生画像（「生」マーク）も選べるがプレビュー専用
+4. **プロンプトを生成** → 右にプロンプトと検査結果（ERROR/WARN）
+5. 直したら **再検査**。納得したら **プロンプト.txt に書き出す**（アーカイブも同時に書き、作品の履歴に残る）
+6. **履歴から呼び出す** で過去のブリーフ／プロンプトを左右に戻せる
+7. **プレビュー生成**（608×352・実測 約7分）→ 結果カードにコンタクトシート 3×3・動画・計測値（フレーム数／実尺／bit_rate／音量／フレーム間差分）。気に入らなければ「seed+1 で再生成」かブリーフへ戻る。**同じ seed・同じプロンプトの再投入は ComfyUI のキャッシュがそのまま返る**（再生成されない）
+8. **本番生成**（1344×768・実測 15.6〜18分）。生画像（背景つき）が混ざっていると確認が出る（本番では背景が漏れる・実測）
+9. **この結果を採用** → `プロンプト.txt` 上書き＋アーカイブ `.txt`＋作品の `shots[]` に動画パス・計測値・job_id を記録。**採用／不採用は人が決める**（アプリは判定しない）
+10. **過去のジョブ** でこのアプリから投入した生成を一覧し、結果を開き直せる。ページを開き直しても実行中ジョブには自動で再接続する
+
+生成中は LM Studio のモデルを降ろして ComfyUI に GPU を渡す。**プロンプト生成に戻るときは、先に ComfyUI の VRAM を空けてから LM Studio を載せ直し、GPU に載りきったかを検算する**（順番が逆だと一部が CPU に載って数倍遅くなり、`lms ps` では気づけない）。既に正しく載っていれば何もしない。ComfyUI のキューに他のジョブがあるときは投入しない。ステップ進捗は ComfyUI の WebSocket から取る（本体パッチ不要）。
+
+### 切り抜き（参照素材の「＋ 切り抜く」）
+
+元イラストから人物を単色背景（#808080）に抜いて `input\` に保存し、そのまま参照画像として選べるようにする。
+
+1. **元画像を選ぶ** — `config.raw_dir` の元イラストか、`input\` の未切り抜き画像。**伏せ字の検閲プレートがあるなら先にインペイントで消す**（SAM3 は板を人物の一部として拾うので後から取れない）
+2. **threshold を振ってみる**（6点・約10〜17秒）→ 各 threshold の検出数が出る。**欲しい人数になる値のチップを押すとその値で検出**。実測例（`person:30,BODY:30,human:30`）: 0.35→34人 / 0.5→23 / 0.6→15 / 0.7→9 / 0.8→2 / **0.9→1（中央1人だけ）**。絵ごとに変わるので新しい絵では必ず振る
+3. **検出**（約1〜7秒）→ 人物ごとのサムネイルに **左から何番目・髪色・面積・score** が付く。クリックで残す人を選ぶ（複数可）
+4. 選んだ瞬間に**プレビューと `check_cut` の検査**が出る（背景の単色性・かたまりの数・被写体の占有率・実効解像度）。群像の小さい人物は **「余白を詰める」** で 2% → 30%台に上がる
+5. **input に保存** → 検査結果つきで保存し、参照素材に自動で追加・選択される
+
+**番号は使い捨て。** `#N` は検出スコア順で、順位はほぼ「画面の水平中心からの距離」で決まる（大きさ・向き・人物とは無関係）。threshold や人数が変われば入れ替わるので、**絵と属性（左から何番目・髪色）で選ぶ**こと。
+
+制約（すべて SAM3 セッションの実測。`SAM3\引き継ぎ.md`）: `refine_iterations` は 1 固定（2以上でマスクが劣化）/ `negative_coords` は使わない（ディザ状に破綻）/ 検出テキストの `:N` は**個数の上限**で、**`:1` は ComfyUI 本体のパースのバグで使えない**（アプリが弾く。Comfy-Org/ComfyUI#15811）。
+
+### Eagle に送る
+
+出来上がった動画を [Eagle](https://eagle.cool/) に登録できる。**「設定」→ E の欄**で有効にし、送信先フォルダと自動送信を決める。
+
+- **送るのは音付きの1本だけ。** ComfyUI の `SendToEagleVideo` ノードは `VHS_VideoCombine` の `Filenames` を受け取る都合で **無音版と音付き版の2本**が登録される。このアプリは結果取得の時点で音付きの1本を特定しているので、それだけを送る
+- **自動送信**: しない / 本番だけ / 全部。生成完了時に走る（失敗しても生成は成功のまま、進捗ログに警告が出るだけ）
+- **手動**: 結果カードの「Eagle に送る」。過去のジョブを開き直してから送ることもできる
+- **コンタクトシートも送る**（任意）
+- 注釈にプロンプト本文・ブリーフ・参照素材・計測値（フレーム数／実尺／bit_rate／音量／フレーム間差分）・生成時間・job id が入り、タグは `MiniMax-H3` / `H3 Studio` / 作品名 / ショットID / 本番|プレビュー / 比率 / ref2va|t2va が付く
+- 同じファイルを再送しても **Eagle 側でパス同定されるので重複しない**
+- ComfyUI のカスタムノードには依存しない（Eagle の HTTP API を直接叩く。既定ではトークン不要。要る環境は `config.eagle.token`）
+
+### 生成の中身（`h3studio/comfy.py`）
+
+既存ワークフロー JSON からはモデル名・サンプラー・出力形式だけを読み、API 形式は自前で組む（設計書 §6）。
+`/free`（モデル＋実行キャッシュ）→ `LoadImage(_cut.png)`×N・`VHS_LoadVideo`×M → `MiniMaxH3ReferenceToVideo`（プロンプト直書き）→ **Purge（VAE 退避）** → UNET(fp8)+Turbo LoRA → `SamplerCustomAdvanced`(euler/normal/6step) → **Purge（UNET 退避）** → VAE デコード（映像・音声）→ `VHS_VideoCombine`(h264 crf12)。
+プレビューは `output/MiniMax-H3/preview/`、本番は `output/MiniMax_H3_000NN.mp4`（手動運用と同じ連番）。`config.gen.*.filename_prefix` で変えられる。
+
+VideoHelperSuite が無い環境では最後の1段が本体の `CreateVideo` + `SaveVideo` に替わる。`Purge` が無ければ挟まない。**どちらも自動で判定するので設定は要らない。**
+
+## モデル
+
+上部「モデル」で切替。一覧には手元の実測（`vendor/sweep.json`、17モデル）のラベルが付く。**推奨は `qwen3.6-27b-...@q4_k_s`（56/56）**。未検証のモデルは「未検証」と出る。
+
+クラウド LLM（OpenAI 互換）に切り替えると:
+- 上部に **「☁ クラウド使用中 · 料金がかかります」** が常時出る（回数・トークン数・概算料金つき）
+- 生成・展開のたびに **確認ダイアログ**（「このセッション中は確認しない」を選べる）
+- 使用量は `usage.json` に積算
+- **API キーは環境変数から読む。** `config.json` にはキーの値ではなく `api_key_env`（環境変数の名前）だけを書く
+
+## 踏んだ罠（実測）
+
+- **LM Studio の「モデル既定設定」が `lms load --context-length` より優先される。** `~/.lmstudio/.internal/user-concrete-model-default-config/.../<file>.gguf.json` の `contextLength` が残っていると、フラグは無視されてその値で載る。98304 が入っていて生成が 16秒 → 215秒になった。アプリは load 後に実効 ctx を読み、違えば警告して「既定設定を直す」ボタンを出す（バックアップあり、書き換えは人が押したときだけ）
+- **ComfyUI が VRAM を抱えたまま（H3 の重み常駐・約9GB）だと LLM は 35秒/本。** ComfyUI 停止時は 15秒。ヘッダーの GPU 表示と注意書きで分かるようにしてある
+- **もっと悪い形: ComfyUI が抱えた状態で LM Studio を載せると、GPU に一部しか載らず残りが CPU に置かれる。** `lms ps` の SIZE は満額（17.16GB）を表示するので**見た目では分からない**。プロンプト生成が 45秒 → 218秒。**あとから ComfyUI を空けても CPU 側の重みは GPU に移らない**（載せ直しが要る）。アプリは載せ直しが要るときだけ先に ComfyUI を降ろし、**ロード前後の VRAM 増分**で載りきったかを検算して、足りなければ1回だけ載せ直す（`gpu.prepare_for_llm`）。**合計 VRAM との比較では判定できない**（ComfyUI も VRAM を持つので誤判定する）。`/system_stats` の `vram_free` も ComfyUI 自身の会計なので使えない
+- **思考を切るのは `reasoning_effort: "none"`。** `chat_template_kwargs.enable_thinking:false` だけでは効かない
+- **2本目以降の生成が 10 倍以上遅くなる（ComfyUI 0.33 の動的 VRAM ローダー）。** 空き VRAM が UNET(約20GB) 以上あると全部載せてしまい、活性化メモリのために毎ブロック重みを出し入れする（step1 が 606 秒、空き 17.7GB のときは 15 秒）。手動ワークフローの `PurgeVRAM V2` はこれ対策。アプリは投入前に `/free`、サンプラー前と VAE デコード前に Purge を挟む（`config.gen.free_vram_before / free_cache_before / purge_node`）。**筋の良い対処は ComfyUI 起動引数 `--reserve-vram 3`**（未検証・推奨として画面に出す）
+- **同じ入力を再投入しても ComfyUI はキャッシュを返すだけ**（再生成されない）。seed かプロンプトを変える。アプリはキャッシュ返却を検出してログに出す
+- **スラッシング中は ComfyUI の HTTP が固まる**（`/interrupt` の応答に 41 秒、停止まで数分）。中止ボタンは押してから待つ
+- プレビューの実測は **約 7 分**（CPU のテキストエンコード 150〜210 秒 ＋ UNET 読込 15〜250 秒 ＋ 6 step 60 秒 ＋ デコード 11 秒）。設計時の「約3分」は出なかった。長いプロンプト（1000語）ほどテキストエンコードが延びる
+- **Windows では `pkill -f "python server.py"` が効かない。** `Get-NetTCPConnection -LocalPort 8765 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`
+
+## 既知の制限
+
+- **尺は実務上 10 秒まで。** それ以上は破綻する（参照素材が増えるほど安全なフレーム数が下がる。Comfy-Org/ComfyUI#15738）
+- **切り抜きはテキスト検出のみ。** 点（`positive_coords`）と枠（`bboxes`）は画面から使えない。`negative_coords` は使わないこと（破綻する）
+- 切り抜きの保存先は `input\` 固定
+- `check_cut` の「かたまりの数」は髪や小物が繋がると当てにならない（1人でも3個と出る）。警告は出るが**人が見て判断する**
+- **画面内の文字は常用の範囲まで。** ひらがな・カタカナ・JIS第1水準の常用漢字・英数は実測 9/9 で正確に出るが、
+  **JIS第2水準は偏だけ合って旁が別の実在漢字になり、異体字（髙・﨑）は通常字体に黙って置き換わる**。読めない字になるのではなく
+  **もっともらしい別の字**になるので、日本語が読めない人の確認では見逃す。入力時に警告は出るが、**最後は人が読んで確かめること**。
+  6文字以上・複数行・縦書きは未検証。カメラが動いても崩れない（実測）
+- ブリーフの「おまかせ」モード展開（`/api/brief/expand`）は **`画面内の文字` 欄に未対応**。解説 `.md` 生成（`/api/prompt/notes`）ともども**未検証**
+- 過去のジョブ一覧は `jobs/` を全部読む（件数が増えたら遅くなる）
+- 画面は `127.0.0.1` 前提。**認証は無いので、外に開けないこと**（`--host` を変えるのは自己責任）
+
+## 動作確認済み環境
+
+| | |
+|---|---|
+| GPU | NVIDIA RTX 4090 24GB |
+| OS | Windows 11 Pro |
+| ComfyUI | 0.33.1（`--reserve-vram` なし） |
+| Python | 3.10 |
+| LLM | LM Studio + `qwen3.6-27b-uncensored-heretic-v2-native-mtp-preserved@q4_k_s`（ctx 16384 / parallel 1 / MTP） |
+| Eagle | 4.0.0 |
+
+**数値（尺の上限・解像度・サンプラー・速度）はすべてこの環境の実測です。** 他の環境では変わります。
+
+## 構成
+
+```
+server.py            FastAPI（--port でポート上書き）
+h3studio/            config / project / llm / brief / promptgen / comfy（投入・進捗）/ gpu（排他・VRAM 検算）/
+                     inspect（ffmpeg 検査）/ cut（SAM3 切り抜き）/ eagle（Eagle 送信）/ textcheck（画面内文字の点検）
+static/              index.html / app.js / style.css（素の JS。ビルド不要）
+vendor/              同梱した部品（h3gen / h3lint / system_h3.txt / check_cut / vlm / sweep.json / modes）
+tools/               開発用スクリプト（下記）
+projects/<作品>/project.json
+jobs/<job_id>/       job.json / contact.jpg / inspect.json（このアプリから投入した生成の記録）
+cutcache/<session>/  切り抜きの検出結果（原寸マスク・サムネ・プレビュー）。12件を超えると古いものから消える
+config.json          ローカルの実値（.gitignore 済み）
+config.example.json  雛形（DEFAULTS から自動生成）
+設計書.md            設計と決定事項・罠の記録
+モックアップ.html     画面の設計図
+```
+
+### 開発用スクリプト（`tools/`）
+
+```bash
+python tools/make_example_config.py
+```
+
+```bash
+python tools/sync_vendor.py --check
+```
+
+```bash
+python tools/validate_graph.py
+```
+
+```bash
+python -m h3studio.config
+```
+
+- `make_example_config.py` — `h3studio/config.py` の `DEFAULTS` から `config.example.json` を起こす。`--check` でずれていたら非 0（手で書くと必ずずれるので自動生成にしてある）
+- `sync_vendor.py` — 正本（`../ローカルLLM/` `../SAM3/`）から `vendor/` へコピー。`--check` で差分検出、`--all` で強制上書き
+- `validate_graph.py` — 組み立てた API グラフを ComfyUI の `/object_info` と突き合わせる。ノードの存在・必須入力・リンク先を **GPU を使わずに** 検査する（VHS ありと無しの両方を組む）
+- `python -m h3studio.config` — 設定の自己診断（画面の「設定」と同じ内容をコンソールに）
+
+部品の正本は `../ローカルLLM/` と `../SAM3/`。`vendor/` は配布用のコピーなので、正本を直したら `sync_vendor.py` を走らせる。配布物には正本が無いので、その場合 `sync_vendor.py` は何もせず正常終了する。
+
+## 公開にあたって
+
+- **アプリは MIT。**
+- **MiniMax-H3 の重みは同梱しない。** ライセンスは **MiniMax H3 Community License**（US/EU/UK/韓国は個別許諾）。ComfyUI・LM Studio・Eagle も同梱しない
+- `config.json` `jobs/` `cutcache/` `usage.json` `projects/` は `.gitignore` 済み。**作品データを一緒に公開したい場合だけ `projects/` の行を外す**
+- 数値はすべて上記「動作確認済み環境」の実測

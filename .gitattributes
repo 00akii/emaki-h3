@@ -1,0 +1,8 @@
+# 改行は LF に固定する。
+# 理由: vendor/system_h3.txt は 56/56 検証済みの資産で、開発中に一度 CRLF に化ける事故があった
+# （Python の io.open が既定で変換する）。checkout 時に CRLF へ変換されると、
+# 正本との diff が全行不一致になり、検証済みかどうかの照合が壊れる。
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.mp4 binary

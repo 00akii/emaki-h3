@@ -1,0 +1,25 @@
+# ローカルの実値。パス・モデル名・Eagle のトークンが入るので公開しない
+config.json
+
+# 実行時に増えるもの
+jobs/
+cutcache/
+usage.json
+server.log
+server.err.log
+_scratch/
+*.bak
+*.bak-h3studio
+
+# Python
+__pycache__/
+*.pyc
+
+# 作品データ（公開したい人だけ外す）。サンプルを入れるなら projects/_sample/ を除外指定する
+projects/
+
+# セッション間の引き継ぎ用。開発機のパスが入るので公開しない
+# （公開するのは README / 設計書。この2つは一般化済み）
+引き継ぎ.md
+キックオフ.txt
+検討_*.md

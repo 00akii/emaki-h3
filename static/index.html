@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>H3 Studio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">H3 Studio <small>MiniMax-H3 · ローカル</small></div>
+  <div class="sel">作品 <select id="projSel"></select> <button class="btn sec sm" id="projNew" title="新しい作品">＋</button></div>
+  <div class="sel">ショット <b id="shotId">S01</b></div>
+  <div class="spacer"></div>
+  <div class="gpu" id="gpuBar">
+    <span class="pill" id="pillLlm"><span class="dot"></span>LLM · …</span>
+    <span class="pill" id="pillComfy"><span class="dot"></span>ComfyUI · …</span>
+    <span class="pill cloud" id="pillCloud" style="display:none">☁ クラウド使用中 · 料金がかかります</span>
+    <button class="btn sec sm" id="btnModels">モデル</button>
+    <button class="btn sec sm" id="btnSettings">設定</button>
+  </div>
+</div>
+
+<div class="wrap">
+<!-- ============ 左: 書く ============ -->
+<div class="left">
+  <div>
+    <h2>ブリーフ <span class="sub">日本語でよい。空欄は既定値</span>
+      <span class="right"><button class="btn sec sm" id="btnHistory">履歴から呼び出す</button></span></h2>
+    <div class="tabs">
+      <button class="tab" data-mode="A">おまかせ<small>1行</small></button>
+      <button class="tab on" data-mode="B">推奨<small>4欄</small></button>
+      <button class="tab" data-mode="C">詳細<small>全キー</small></button>
+    </div>
+
+    <div id="modeA" style="display:none">
+      <div class="field"><label class="req">1行で</label>
+        <div>
+          <textarea class="in" id="aText" rows="2" placeholder="夕方の屋上で彼女が空を見上げる"></textarea>
+          <div class="hint">「展開」を押すと4欄（推奨）に開きます。どう解釈したかを確認してから生成できます。</div>
+          <button class="btn sec sm" id="btnExpand" style="margin-top:6px">4欄に展開 <span class="t">LLM</span></button>
+        </div></div>
+    </div>
+
+    <div id="modeB">
+      <div class="field"><label class="req">場所と時間<button class="q on" data-help="helpPlace">?</button></label>
+        <div>
+          <textarea class="in" id="bPlace" rows="2"></textarea>
+          <div class="help" id="helpPlace">
+            <b>どこで・いつ・何でできているか</b>を書く。素材名（コンクリート／鉄／硝子／木）を1つ入れると画が締まる。
+            <span class="ex">夕立のあとの夕方、学校の屋上。濡れたコンクリート</span>
+            <span class="ex">夜の自室。木の机と紙のノート、硝子のコップ</span>
+            <span class="why">参照画像の背景が漏れるのを、新しい場所の具体物で押し返す（実測 R9）。<span class="bad">幻想的な雰囲気の場所</span> は画に落ちない。</span>
+          </div>
+        </div></div>
+      <div class="field"><label class="req">動き<button class="q on" data-help="helpMotion">?</button></label>
+        <div>
+          <textarea class="in" id="bMotion" rows="2"></textarea>
+          <div class="steps2" id="motionSteps"></div>
+          <div class="help" id="helpMotion">
+            <b>順番どおりに区切って書く。</b>3〜5段階が目安。最後に止まる状態まで書く。
+            <span class="ex">机に座っている 顔を上げる 立ち上がる 鞄を肩にかける</span>
+            <span class="why"><b>区切りは打ちやすいもので構いません</b> — スペース・読点「、」・ハイフン「-」・改行・矢印「→」のどれでも同じに扱います（上に解釈結果が出ます）。<br>
+            動きの質は参照動画ではなく<b>この文章</b>で決まる（実測 R5）。<span class="bad">自然に動く</span> <span class="bad">いい感じに</span> は何も渡らない。</span>
+          </div>
+        </div></div>
+      <div class="field"><label>開始の構図<button class="q" data-help="helpFram">?</button></label>
+        <div>
+          <div class="row" id="framChips" style="margin-bottom:6px"></div>
+          <input class="in mini" id="bFraming" placeholder="空欄なら LLM が選ぶ（たいてい全身の引き）">
+          <div class="hint" id="framingCheck"></div>
+          <div class="help hidden" id="helpFram"><b>1フレーム目の構図</b>。高さ（目線／ハイ／ロー）と視点（正面／真横／背面）は確実に効く。<b>寄り</b>（胸から上より近い）を選んでカメラが引かない場合は、本文を画角内の要素に絞る修正が自動で入る（実測: 絞らないと×9、絞ると×0）。寄りから引く組み合わせは成立しにくいので警告が出る。<span class="bad">ダッチアングル・真俯瞰・望遠</span> は効かないので選択肢にない。</div>
+        </div></div>
+      <div class="field"><label>カメラ（終端）<button class="q on" data-help="helpCam">?</button></label>
+        <div>
+          <div class="row" id="camChips" style="margin-bottom:6px"></div>
+          <input class="in mini" id="bCamera" placeholder="顔が画面の上半分を占めるまで寄る">
+          <div class="help" id="helpCam"><b>終端の構図</b>を書くと効きます（実測 12/12）。空欄だと静止ショットになります。寄り／引きは開始より<b>こちら</b>で指定する方が通る。到達する画角は目安で保証ではない。</div>
+        </div></div>
+      <div class="field"><label>画面内の文字<button class="q" data-help="helpText">?</button></label>
+        <div>
+          <input class="in mini" id="bText" placeholder="看板に「こんにちは」　なければ空欄">
+          <div class="hint" id="textCheck"></div>
+          <div class="help hidden" id="helpText"><b>看板・札・画面に出す文字</b>。カギカッコの中が一字一句そのまま出ます。前に「看板に」「ネオンで」など載せる物を書けます（無ければ LLM が画角内に看板か画面を置く）。<b>常用漢字・かな・英数は正確に出る</b>（実測 9/9）。<span class="bad">稀少な漢字・旧字体</span> は<b>別の実在漢字に静かに置き換わる</b>ことがある（鵺鰰→別字、髙﨑→高崎）ので、入力時に警告が出ます。カメラが動いても崩れない。寄りの構図を選んでも、この欄は「画角には入らない」扱いにならない。</div>
+        </div></div>
+      <div class="field"><label>セリフ<button class="q" data-help="helpDia">?</button></label>
+        <div>
+          <input class="in mini" id="bDialogue" placeholder="少女（落ち着いた低め）「…」　なければ空欄">
+          <div class="help hidden" id="helpDia">話者（性別・年齢・声質）「本文」の形。カギカッコの中は一字一句そのまま入ります。8秒なら日本語30文字以内が目安。</div>
+        </div></div>
+    </div>
+
+    <div id="modeC" style="display:none">
+      <div class="field"><label>全キー</label>
+        <div>
+          <textarea class="in" id="cRaw" rows="12" style="font-family:var(--mono);font-size:11.5px"></textarea>
+          <div class="hint">MODE / DURATION / RATIO / STYLE / REFS / SHOT / FRAMING / CAMERA / DIALOGUE / SOUND / MUSIC をそのまま書きます。</div>
+        </div></div>
+    </div>
+  </div>
+
+  <div>
+    <h2>参照素材 <span class="sub">作品の設定から</span></h2>
+    <div class="refgrp">画像 · キャラ表 <span id="imgCount" style="color:var(--ok)"></span>
+      <label style="margin-left:auto;font-size:10.5px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="cutOnly" checked> 切り抜き済みのみ</label></div>
+    <div class="refs" id="imgRefs"></div>
+    <div class="hint">生画像（背景つき）も選べる。<b>プレビュー（608×352）なら漏れない</b>が本番では背景が漏れる（実測）。</div>
+    <div class="refgrp">動画 · モーション／カメラ参照 <span id="vidCount" style="color:var(--ok)"></span></div>
+    <div class="refs" id="vidRefs"></div>
+    <div class="hint">動画は <b>&lt;Video N&gt;</b> として渡る。動きの再現は「動き」欄の文章が支配的（実測）。枚数が増えるほど安全な尺が短くなる。</div>
+    <div class="opts">
+      <div class="opt"><div class="k">尺</div><div class="v"><select id="duration"><option>4</option><option>5</option><option>6</option><option>7</option><option selected>8</option><option>9</option><option>10</option></select><span style="color:var(--ink3);font-size:11px" id="frames">→192f</span></div></div>
+      <div class="opt"><div class="k">比率</div><div class="v"><select id="ratio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:3</option><option>21:9</option></select></div></div>
+      <div class="opt"><div class="k">seed</div><div class="v"><input id="seed" value="1" style="width:60px"></div></div>
+    </div>
+  </div>
+
+  <button class="btn big" id="btnGen">プロンプトを生成 <span class="t" id="genEta">約16秒</span></button>
+
+  <div class="prog">
+    <div class="row" style="justify-content:space-between"><b style="font-size:12.5px">進捗 <span id="progStep" style="font-family:var(--mono);font-weight:400;color:var(--accent-ink);font-size:11px"></span></b><span class="row" style="gap:8px"><button class="btn sec sm" id="btnCancel" style="display:none">中止</button><span style="font-family:var(--mono);font-size:11px;color:var(--ink3)" id="progTime">—</span></span></div>
+    <div class="steps" id="steps"><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div></div>
+    <div class="row" style="font-size:11px;color:var(--ink3);justify-content:space-between"><span>LLM</span><span>生成</span><span>検査</span><span>GPU切替</span><span>ComfyUI</span></div>
+    <div class="log" id="log">待機中</div>
+  </div>
+</div>
+
+<!-- ============ 右: 読む・回す ============ -->
+<div class="right">
+  <div class="card">
+    <div class="hd">
+      <h2>プロンプト <span class="sub">編集できます。直したら「再検査」</span></h2>
+      <div class="lint" id="lintBadges"><span class="badge">未生成</span></div>
+    </div>
+    <textarea class="prompt" id="promptBox" spellcheck="false" placeholder="ここに生成結果が入ります。直接編集もできます。"></textarea>
+    <div class="lintlist" id="lintList" style="display:none"></div>
+    <div class="actions">
+      <button class="btn sec" id="btnCopy">コピー <span class="t">クリップボードへ</span></button>
+      <button class="btn sec" id="btnLint">再検査</button>
+      <button class="btn sec" id="btnRetry">やり直す <span class="t">seed+1</span></button>
+      <button class="btn sec" id="btnWrite">プロンプト.txt に書き出す</button>
+      <span class="sp"></span>
+      <button class="btn sec" id="btnPreview" title="ComfyUI に投入（LM Studio を降ろしてから）">プレビュー生成 <span class="t" id="etaPreview">608×352 · 約7分</span></button>
+      <button class="btn acc" id="btnFinal" title="ComfyUI に投入（LM Studio を降ろしてから）">本番生成 <span class="t" id="etaFinal">1344×768 · 約16分</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><h2>ブリーフ（実際に LLM へ渡した文） <span class="sub">確認用</span></h2></div>
+    <pre class="prompt" id="briefBox" style="min-height:80px;max-height:220px;margin:0">—</pre>
+  </div>
+
+  <div class="card" id="resultCard">
+    <div class="hd"><h2>結果 <span class="sub" id="resSub">プレビュー／本番の生成結果</span></h2>
+      <div class="lint" id="resBadges"><button class="btn sec sm" id="btnJobs">過去のジョブ</button></div></div>
+    <div class="empty" id="resEmpty">「プレビュー生成」か「本番生成」を押すと、ここにコンタクトシート・動画・計測値が出ます。採用／不採用は人が決めます（自動判定はしません）。</div>
+    <div id="resBody" style="display:none">
+      <div class="resgrid">
+        <div><img id="resContact" class="contact" alt="コンタクトシート 3×3"><div class="hint" id="resContactCap"></div></div>
+        <div><video id="resVideo" class="player" controls playsinline preload="metadata"></video><div class="hint" id="resVideoCap"></div></div>
+      </div>
+      <dl class="kv metrics" id="resMetrics"></dl>
+      <div class="notes" id="resNotes" style="display:none"></div>
+      <div class="actions">
+        <button class="btn acc" id="btnAdopt">この結果を採用 <span class="t">プロンプト.txt + アーカイブ + 作品に記録</span></button>
+        <button class="btn sec" id="btnEagle" style="display:none">Eagle に送る <span class="t" id="eagleT">音付きの1本</span></button>
+        <button class="btn sec" id="btnAgainSeed">seed+1 で再生成 <span class="t">同じ seed は ComfyUI のキャッシュが返る</span></button>
+        <button class="btn sec" id="btnToFinal">この設定で本番へ <span class="t">1344×768</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+</div>
+
+<!-- ============ モデル選択 ============ -->
+<div class="modalbg" id="mdModels">
+  <div class="modal">
+    <div class="mh"><h2>モデル <span class="sub">実測の合格率つき。推奨は上</span></h2><button class="x" data-close="mdModels">×</button></div>
+    <div class="mb">
+      <div class="warnbox" id="cloudWarnModels" style="display:none"><b>☁ クラウド LLM を使っています。</b>プロンプト生成のたびに料金がかかります（1回あたり約8〜9k トークン）。使用量は上部の表示で確認できます。</div>
+      <div class="row" style="font-size:12px">
+        <span>バックエンド</span>
+        <select id="backendSel" class="in mini" style="width:auto"><option value="lmstudio">LM Studio（ローカル・無料）</option><option value="openai_compat">OpenAI互換 API（クラウド・有料）</option></select>
+        <span class="hint" style="margin:0">クラウドにすると GPU 切替が不要になり、24GB 未満の GPU でも使えます。</span>
+      </div>
+      <div id="cloudFields" style="display:none">
+        <div class="field"><label>base_url</label><input class="in mini" id="ocBase" placeholder="https://api.openai.com/v1"></div>
+        <div class="field"><label>API キー</label><div><input class="in mini" id="ocKeyEnv" placeholder="H3STUDIO_LLM_KEY"><div class="hint">キーは <b>環境変数名</b> で指定。値は config.json に書きません。</div></div></div>
+        <div class="field"><label>model</label><input class="in mini" id="ocModel" placeholder="gpt-4o-mini など"></div>
+      </div>
+      <div class="mlist" id="modelList"><div class="empty">読み込み中…</div></div>
+    </div>
+    <div class="mf">
+      <button class="btn sec" id="btnLoadModel">このモデルをロード <span class="t">LM Studio</span></button>
+      <button class="btn sec" id="btnUnload">全部降ろす <span class="t">ComfyUI に GPU を渡す</span></button>
+      <span class="sp"></span>
+      <button class="btn" id="btnSaveModel">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 設定 ============ -->
+<div class="modalbg" id="mdSettings">
+  <div class="modal">
+    <div class="mh"><h2>設定 <span class="sub" id="cfgSource"></span></h2><button class="x" data-close="mdSettings">×</button></div>
+    <div class="mb">
+      <dl class="kv" id="cfgChecks"></dl>
+      <div class="hint">赤い項目は <code>config.json</code> を直してください。パスはすべてここに外出ししてあり、コードには書いていません。</div>
+
+      <div class="cutstep" style="margin-top:14px"><b>N</b> ComfyUI のノード <span class="sub" id="pfMsg"></span></div>
+      <dl class="kv" id="pfNodes"></dl>
+      <div class="hint">「本体」は ComfyUI 0.33 以降に最初から入っています。それ以外は ComfyUI Manager などで導入してください。<b>必須</b>が欠けていると生成できません。</div>
+
+      <div class="cutstep" style="margin-top:14px"><b>W</b> 重みファイル <span class="sub">ワークフロー JSON から読んだ名前で照合</span></div>
+      <dl class="kv" id="pfModels"></dl>
+      <div class="hint">名前が違うと出た場合は、ComfyUI で H3 のワークフローを開いて保存し直すか、<code>config.json</code> の <code>workflow_json</code> をその環境のものに向けてください。</div>
+
+      <div class="cutstep" style="margin-top:14px"><b>E</b> Eagle に送る <span class="sub" id="eagleEnv"></span></div>
+      <div class="row">
+        <label class="mini"><input type="checkbox" id="egEnabled"> 連携を有効にする</label>
+        <label class="mini">送信先 <select class="in mini" id="egFolder" style="width:260px"><option value="">（ライブラリ直下）</option></select></label>
+        <button class="btn sec sm" id="btnEgReload">フォルダ再取得</button>
+      </div>
+      <div class="row">
+        <label class="mini">自動送信
+          <select class="in mini" id="egAuto" style="width:190px">
+            <option value="off">しない（ボタンで送る）</option>
+            <option value="final">本番だけ自動で送る</option>
+            <option value="all">プレビューも含めて全部</option>
+          </select></label>
+        <label class="mini"><input type="checkbox" id="egSheet"> コンタクトシートも送る</label>
+        <button class="btn sec sm" id="btnEgSave">Eagle 設定を保存</button>
+      </div>
+      <div class="hint"><b>送るのは音付きの1本だけ</b>です。ComfyUI の <code>SendToEagleVideo</code> は無音版と音付き版の2本を送ってしまうため使っていません。注釈にはプロンプト本文・ブリーフ・計測値（フレーム数／実尺／bit_rate／音量／フレーム間差分）が入り、タグは作品名・ショットID・本番/プレビュー・比率が付きます。</div>
+    </div>
+    <div class="mf"><span class="sp"></span><button class="btn sec" id="btnRecheck">再チェック</button></div>
+  </div>
+</div>
+
+<!-- ============ 履歴 ============ -->
+<div class="modalbg" id="mdHistory">
+  <div class="modal wide">
+    <div class="mh"><h2>履歴から呼び出す <span class="sub">ブリーフとプロンプトを左右に戻す</span></h2><button class="x" data-close="mdHistory">×</button></div>
+    <div class="mb">
+      <div class="row"><input class="in mini" id="histQ" placeholder="検索（作品・ショット・本文）" style="max-width:320px"><button class="btn sec sm" id="histSearch">検索</button>
+        <label style="font-size:12px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="histThisOnly" checked>この作品だけ</label></div>
+      <div class="mlist" id="histList"><div class="empty">読み込み中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 新規作品 ============ -->
+<div class="modalbg" id="mdNewProj">
+  <div class="modal" style="width:460px">
+    <div class="mh"><h2>新しい作品</h2><button class="x" data-close="mdNewProj">×</button></div>
+    <div class="mb">
+      <input class="in mini" id="newProjName" placeholder="作品名（フォルダ名になります）">
+      <div class="hint">スタイル宣言・キャラ定義・参照素材は、作成後に「作品の設定」から。</div>
+    </div>
+    <div class="mf"><span class="sp"></span><button class="btn" id="btnCreateProj">作成</button></div>
+  </div>
+</div>
+
+<!-- ============ 切り抜き（SAM3） ============ -->
+<div class="modalbg" id="mdCut">
+  <div class="modal wide">
+    <div class="mh"><h2>切り抜き <span class="sub">SAM3 で人物を単色背景に抜き、参照画像にする</span></h2>
+      <span class="badge" id="cutEnv"></span><button class="x" data-close="mdCut">×</button></div>
+    <div class="mb">
+
+      <div class="cutstep"><b>1</b> 元画像を選ぶ
+        <span class="row" style="margin-left:auto;gap:10px">
+          <label class="mini"><input type="radio" name="cutSrc" value="raw" checked> 元イラスト</label>
+          <label class="mini"><input type="radio" name="cutSrc" value="input"> input の未切り抜き</label>
+        </span></div>
+      <div class="refs" id="cutSrcList"><div class="empty">読み込み中…</div></div>
+      <div class="hint">伏せ字の検閲プレートがあるなら<b>先にインペイントで消す</b>。SAM3 は板を人物の一部として拾うので後から取れません（<code>_clean</code> があればそちらを）。</div>
+
+      <div class="cutstep"><b>2</b> 検出する <span class="sub" id="cutPicked"></span></div>
+      <div class="row">
+        <label class="mini">検出テキスト <input class="in mini" id="cutText" value="person:5" style="width:150px"></label>
+        <label class="mini">threshold <input class="in mini" id="cutTh" type="number" min="0.05" max="0.95" step="0.05" value="0.5" style="width:70px"></label>
+        <button class="btn" id="btnCutDetect">検出 <span class="t">約2〜7秒</span></button>
+        <button class="btn sec" id="btnCutSweep">threshold を振ってみる <span class="t">6点·約10秒</span></button>
+        <span class="hint" style="margin:0">検出数が多すぎたら threshold を上げる（実測 0.5→23個 / 0.9→1個）。<code>:N</code> は個数の上限、<b><code>:1</code> は本体のバグで使えない</b>。refine は 1 固定（2以上でマスクが劣化）。</span>
+      </div>
+      <div class="sweep" id="cutSweep" style="display:none"></div>
+      <div class="cutdets" id="cutDets"></div>
+      <div class="hint" id="cutOrderNote" style="display:none">番号は<b>検出スコア順</b>で、順位はほぼ「画面の水平中心からの距離」で決まります。大きさ・向き・人物とは無関係なので、<b>番号ではなく絵と属性（左から何番目・髪色）で選んでください</b>。threshold や人数を変えると並びは変わります。</div>
+
+      <div class="cutstep"><b>3</b> 確認して保存
+        <span class="row" style="margin-left:auto;gap:10px">
+          <label class="mini"><input type="checkbox" id="cutCrop"> 余白を詰める（クロップ）</label>
+          <label class="mini">余白 <input class="in mini" id="cutMargin" type="number" min="0" max="300" step="10" value="40" style="width:64px">px</label>
+        </span></div>
+      <div class="cutout">
+        <div><img id="cutPreview" class="contact" alt="切り抜きプレビュー" style="display:none"><div class="empty" id="cutPrevEmpty">残す人を選ぶとここにプレビューが出ます</div></div>
+        <div>
+          <dl class="kv" id="cutMetrics"></dl>
+          <div class="notes" id="cutNotes" style="display:none"></div>
+          <div class="hint" id="cutCheckInfo" style="font-family:var(--mono);font-size:10.5px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <label class="mini">保存名 <input class="in mini" id="cutName" placeholder="h3ref_S01_front_cut.png" style="width:280px"></label>
+      <span class="sp"></span>
+      <button class="btn sec" id="btnCutPreview">プレビュー</button>
+      <button class="btn acc" id="btnCutSave">input に保存して参照に加える</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 過去のジョブ ============ -->
+<div class="modalbg" id="mdJobs">
+  <div class="modal wide">
+    <div class="mh"><h2>過去のジョブ <span class="sub">このアプリから投入した生成。クリックで結果を開く</span></h2><button class="x" data-close="mdJobs">×</button></div>
+    <div class="mb"><div class="mlist" id="jobList"><div class="empty">読み込み中…</div></div></div>
+  </div>
+</div>
+
+<!-- ============ クラウド確認 ============ -->
+<div class="modalbg" id="mdCloud">
+  <div class="modal" style="width:460px">
+    <div class="mh"><h2>☁ クラウド LLM を使います</h2><button class="x" data-close="mdCloud">×</button></div>
+    <div class="mb">
+      <div class="warnbox"><b>料金がかかります。</b><span id="cloudReason"></span></div>
+      <dl class="kv" id="cloudUsage"></dl>
+      <label style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="cloudDontAsk">このセッション中は確認しない</label>
+    </div>
+    <div class="mf"><button class="btn sec" data-close="mdCloud">やめる</button><span class="sp"></span><button class="btn acc" id="btnCloudGo">使う</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

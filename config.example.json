@@ -1,0 +1,77 @@
+{
+  "comfy_url": "http://127.0.0.1:8189",
+  "comfy_input_dir": "C:/ComfyUI/input",
+  "comfy_output_dir": "C:/ComfyUI/output",
+  "workflow_json": "C:/ComfyUI/user/default/workflows/video_minimax_h3_i2v.json",
+  "prompt_txt": "C:/ComfyUI/output/MiniMax-H3/prompt.txt",
+  "archive_dir": "C:/ComfyUI/output/MiniMax-H3/archive",
+  "raw_dir": "C:/art/reference",
+  "lmstudio_url": "http://localhost:1234",
+  "lmstudio_model": "",
+  "lms_cli": "lms",
+  "ffmpeg": "ffmpeg",
+  "port": 8765,
+  "llm": {
+    "backend": "lmstudio",
+    "openai_compat": {
+      "base_url": "https://api.openai.com/v1",
+      "api_key_env": "H3STUDIO_LLM_KEY",
+      "model": ""
+    }
+  },
+  "video": {
+    "backend": "comfy"
+  },
+  "gen": {
+    "preview": {
+      "width": 608,
+      "height": 352,
+      "filename_prefix": "MiniMax-H3/preview/MiniMax_H3"
+    },
+    "final": {
+      "width": 1344,
+      "height": 768,
+      "filename_prefix": "MiniMax_H3"
+    },
+    "steps": 6,
+    "sampler": "euler",
+    "scheduler": "normal",
+    "max_duration": 10,
+    "default_duration": 8,
+    "ref_video": {
+      "width": 608,
+      "height": 352,
+      "frame_load_cap": 97,
+      "skip_first_frames": 48
+    },
+    "free_vram_before": true,
+    "free_cache_before": true,
+    "purge_node": "LayerUtility: PurgeVRAM V2",
+    "free_comfy_before_llm": true,
+    "free_comfy_min_gb": 2,
+    "vram_mode": "share"
+  },
+  "lmstudio_load": {
+    "context_length": 16384,
+    "parallel": 1,
+    "speculative_mtp": true,
+    "ttl": 3600
+  },
+  "sam3": {
+    "checkpoint": "",
+    "text": "person:5",
+    "threshold": 0.5,
+    "refine": 1,
+    "crop_margin": 40
+  },
+  "eagle": {
+    "enabled": false,
+    "url": "http://localhost:41595",
+    "token": "",
+    "folder_id": "",
+    "folder_name": "",
+    "auto": "off",
+    "send_contact_sheet": false,
+    "extra_tags": []
+  }
+}

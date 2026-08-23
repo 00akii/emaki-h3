@@ -1,0 +1,14 @@
+MODE: ref2va
+DURATION: 8
+RATIO: 16:9
+STYLE:
+REFS:
+  参照画像1:
+  参照画像2:
+  参照動画1:
+  参照音声1:
+SHOT:
+CAMERA:
+DIALOGUE: なし
+SOUND:
+MUSIC: なし
