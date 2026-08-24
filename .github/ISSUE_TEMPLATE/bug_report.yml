@@ -104,7 +104,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: H3 Studio のバージョン / H3 Studio version
+      label: 絵巻H3 のバージョン / Emaki H3 version
       description: "`h3studio/__init__.py` の `__version__`、または `git rev-parse --short HEAD` の値。"
       placeholder: "0.1.0"
     validations:

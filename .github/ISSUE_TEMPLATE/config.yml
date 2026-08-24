@@ -1,11 +1,11 @@
 blank_issues_enabled: true
 contact_links:
   - name: 踏んだ罠（実測）と既知の制限 / Known traps and limitations
-    url: https://github.com/00akii/h3-studio#踏んだ罠実測
+    url: https://github.com/00akii/emaki-h3#踏んだ罠実測
     about: 遅い・落ちる・文字が違う——報告の前にここを見てください。既知のものが多いです。
   - name: 動作確認済み環境 / Verified environment
-    url: https://github.com/00akii/h3-studio#動作確認済み環境
+    url: https://github.com/00akii/emaki-h3#動作確認済み環境
     about: README の数値がどの環境の実測かの明記。あなたの環境では変わります。
   - name: MiniMax-H3 の重みとライセンス / MiniMax-H3 weights and license
-    url: https://github.com/00akii/h3-studio#公開にあたって
+    url: https://github.com/00akii/emaki-h3#公開にあたって
     about: 重みは同梱していません（MiniMax H3 Community License）。モデル自体の問題はこのリポジトリの管轄外です。
