@@ -148,6 +148,107 @@
   const nextShotId = (p) => { const n = (p.shots || []).map(s => parseInt((s.id || "").replace(/\D/g, "")) || 0); return "S" + String((n.length ? Math.max(...n) : 0) + 1).padStart(2, "0"); };
   $("projSel").onchange = (e) => loadProject(e.target.value);
   $("projNew").onclick = () => { $("newProjName").value = ""; open("mdNewProj"); };
+
+  // ---------------- 作品の設定（マニュアル担当の依頼 2026-08-24。mdNewProj の案内先が存在しなかった） ----------------
+  // PUT /api/projects/{name} は**全置換**。編集した欄だけ差し込んだ完全なオブジェクトを送る（shots・image_roles を消さないため）
+  let pEdit = null;   // 編集中のコピー。保存するまで state.project に触らない
+  $("projEdit").onclick = async () => {
+    if (!state.projName) return toast("先に作品を選んでください", "warn");
+    pEdit = JSON.parse(JSON.stringify(await api("/api/projects/" + encodeURIComponent(state.projName))));
+    $("projEditName").textContent = state.projName;
+    $("pStyle").value = pEdit.style || "";
+    $("pDuration").value = (pEdit.defaults && pEdit.defaults.duration) || 8;
+    $("pRatio").value = (pEdit.defaults && pEdit.defaults.ratio) || "16:9";
+    $("pMusic").value = (pEdit.defaults && pEdit.defaults.music) || "";
+    $("pSeed").value = (pEdit.comfy && pEdit.comfy.seed != null) ? pEdit.comfy.seed : 1;
+    $("pMsg").textContent = "";
+    await renderPSubjects(); renderPVideos();
+    open("mdProj");
+  };
+
+  async function pAssetLists() {
+    const [im, vi] = await Promise.all([api("/api/assets/images?cut_only=false"), api("/api/assets/videos")]);
+    return { images: im.items || [], videos: vi.items || [] };
+  }
+
+  async function renderPSubjects(filter) {
+    // input\ には生画像が数百枚あるので、既定は切り抜き済み（_cut）だけを出す。
+    // 検索で生画像も探せる（選択済みのものは絞り込みに関係なく常に出す）
+    const { images } = await pAssetLists();
+    const box = $("pSubjects"); box.innerHTML = "";
+    const f = (filter || "").toLowerCase();
+    (pEdit.subjects || []).forEach((sub, i) => {
+      const d = document.createElement("div");
+      d.className = "card"; d.style.cssText = "padding:8px;margin-bottom:8px";
+      const picked = new Set(sub.images || []);
+      d.innerHTML = `
+        <div class="row" style="margin-bottom:6px">
+          <input class="in mini" style="width:130px" data-k="label" value="${esc(sub.label || ("Subject " + (i + 1)))}" title="ラベル（Subject N）">
+          <span class="sp"></span>
+          <button class="btn sec sm" data-del="${i}">削除</button>
+        </div>
+        <textarea class="in" rows="2" data-k="description" placeholder="見た目の説明（髪・目・服。参照画像に写っているとおりに）">${esc(sub.description || "")}</textarea>
+        <div class="row" data-imgs style="margin-top:6px;flex-wrap:wrap;gap:4px"></div>`;
+      const imgRow = d.querySelector("[data-imgs]");
+      const shown = images.filter(img => picked.has(img.name) || (f ? img.name.toLowerCase().includes(f) : img.cut));
+      shown.slice(0, 60).forEach(img => {
+        const name = img.name || img;
+        const b = document.createElement("button");
+        b.className = "chip" + (picked.has(name) ? " on" : "");
+        b.title = name;
+        b.innerHTML = `<img src="/api/file/input/${encodeURIComponent(name)}" style="width:34px;height:34px;object-fit:cover;border-radius:3px;vertical-align:middle"> ${esc(name.length > 22 ? name.slice(0, 20) + "…" : name)}${img.cut === false ? ' <span class="t">生</span>' : ""}`;
+        b.onclick = () => { if (picked.has(name)) { picked.delete(name); b.classList.remove("on"); } else { picked.add(name); b.classList.add("on"); } sub.images = [...picked]; };
+        imgRow.appendChild(b);
+      });
+      d.querySelector('[data-k="label"]').oninput = (e) => sub.label = e.target.value;
+      d.querySelector('[data-k="description"]').oninput = (e) => sub.description = e.target.value;
+      if (shown.length > 60) {
+        const more = document.createElement("span"); more.className = "hint";
+        more.textContent = "…ほか " + (shown.length - 60) + " 枚（検索で絞ってください）"; imgRow.appendChild(more);
+      }
+      d.querySelector("[data-del]").onclick = () => { pEdit.subjects.splice(i, 1); renderPSubjects($("pImgFilter").value); };
+      box.appendChild(d);
+    });
+    if (!(pEdit.subjects || []).length) box.innerHTML = '<div class="hint">キャラ定義がありません。「＋ キャラを追加」から。</div>';
+  }
+  let pFilterT = null;
+  $("pImgFilter").oninput = () => { clearTimeout(pFilterT); pFilterT = setTimeout(() => renderPSubjects($("pImgFilter").value), 300); };
+  $("pAddSubj").onclick = () => { (pEdit.subjects = pEdit.subjects || []).push({ label: "Subject " + ((pEdit.subjects.length || 0) + 1), description: "", images: [], image_roles: {} }); renderPSubjects(); };
+
+  async function renderPVideos() {
+    const { videos } = await pAssetLists();
+    const box = $("pVideos"); box.innerHTML = "";
+    (pEdit.ref_videos || []).forEach((rv, i) => {
+      const d = document.createElement("div");
+      d.className = "row"; d.style.cssText = "margin-bottom:6px;gap:6px";
+      const opts = videos.map(v => { const n = v.name || v; return `<option value="${esc(n)}"${n === rv.file ? " selected" : ""}>${esc(n)}</option>`; }).join("");
+      d.innerHTML = `
+        <select class="in mini" style="width:230px" data-k="file"><option value="">（ファイルを選ぶ）</option>${opts}</select>
+        <input class="in mini" style="flex:1" data-k="description" placeholder="動きの説明（何がどう動くか）" value="${esc(rv.description || "")}">
+        <button class="btn sec sm" data-del>削除</button>`;
+      d.querySelector('[data-k="file"]').onchange = (e) => rv.file = e.target.value;
+      d.querySelector('[data-k="description"]').oninput = (e) => rv.description = e.target.value;
+      d.querySelector("[data-del]").onclick = () => { pEdit.ref_videos.splice(i, 1); renderPVideos(); };
+      box.appendChild(d);
+    });
+    if (!(pEdit.ref_videos || []).length) box.innerHTML = '<div class="hint">参照動画はありません（無くても生成できます）。</div>';
+  }
+  $("pAddVid").onclick = () => { (pEdit.ref_videos = pEdit.ref_videos || []).push({ file: "", description: "" }); renderPVideos(); };
+
+  $("pSave").onclick = async () => {
+    pEdit.style = $("pStyle").value.trim();
+    pEdit.defaults = Object.assign({}, pEdit.defaults, {
+      duration: parseInt($("pDuration").value) || 8,
+      ratio: $("pRatio").value,
+      music: $("pMusic").value.trim() || "N/A",
+    });
+    pEdit.comfy = Object.assign({}, pEdit.comfy, { seed: parseInt($("pSeed").value) || 1 });
+    pEdit.ref_videos = (pEdit.ref_videos || []).filter(v => v.file);   // ファイル未選択の行は保存しない
+    await api("/api/projects/" + encodeURIComponent(state.projName), { method: "PUT", body: JSON.stringify(pEdit) });
+    close("mdProj");
+    await loadProject(state.projName);   // 参照素材の既定選択・seed 等を反映し直す
+    toast("保存しました");
+  };
   $("btnCreateProj").onclick = async () => { const n = $("newProjName").value.trim(); if (!n) return toast("作品名を入れてください", "warn"); await api("/api/projects", { method: "POST", body: JSON.stringify({ name: n }) }); close("mdNewProj"); await loadProjects(n); toast("作成しました: " + n); };
 
   // ---------- 参照素材 ----------

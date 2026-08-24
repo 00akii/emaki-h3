@@ -101,7 +101,55 @@ def preflight(cfg: dict) -> dict:
     if bad_models:
         can = False
         msg = ((msg + " / ") if miss else "") + "重みが見つかりません: " + "、".join(m["what"] for m in bad_models)
-    return {"comfy": True, "can_generate": can, "nodes": nodes, "models": models, "message": msg}
+    vram = vram_check(cfg)
+    if vram.get("level") in ("warn", "tight"):
+        msg = msg + " / " + vram["message"]
+    return {"comfy": True, "can_generate": can, "nodes": nodes, "models": models,
+            "vram": vram, "message": msg}
+
+
+# 実測（RTX 4090 24GB）に基づく目安。**これ以外の容量では検証していない。**
+# UNET は Q5_K_M GGUF で約 20GB、LLM（27B Q4_K_S）が約 17GB。アプリは両者を**時分割**で載せる
+# （同時に載せるわけではない）ので、必要なのは「大きい方＋作業領域」であって合計ではない。
+VRAM_UNET_GB = 20.0
+VRAM_WORK_GB = 3.0      # 活性化メモリと VAE。24GB 機で UNET 常駐時の空きが 1〜4GB だった実測から
+
+
+def vram_check(cfg: dict) -> dict:
+    """GPU の容量が足りそうかを**先に言う**。落とさないし止めない（断定できる実測が無いため）。
+
+    実測は 24GB の1環境しか無い。よって「動かない」とは書かず、**何が起きるかを具体的に伝える**。
+    判定に使うのは `/system_stats` の総容量だけ（空き容量は使わない — ComfyUI 自身の torch 会計で
+    デバイス全体の空きを表さないことが実測で分かっている。`gpu.residency()` の docstring 参照）。
+    """
+    try:
+        with urllib.request.urlopen(cfg["comfy_url"].rstrip("/") + "/system_stats", timeout=3) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        dev = (d.get("devices") or [{}])[0]
+        total_gb = round((dev.get("vram_total") or 0) / 1e9, 1)
+    except Exception as e:
+        return {"level": "unknown", "message": "", "error": str(e)[:80]}
+    if not total_gb:
+        return {"level": "unknown", "message": ""}
+    need = VRAM_UNET_GB + VRAM_WORK_GB
+    out = {"level": "ok", "total_gb": total_gb, "need_gb": need, "message": "",
+           "verified_on_gb": 24, "note": "実測は 24GB の1環境のみ。それ以外は未検証"}
+    if total_gb >= need:
+        return out
+    if total_gb >= VRAM_UNET_GB:
+        out["level"] = "tight"
+        out["message"] = ("GPU の VRAM が %.1fGB です。UNET だけで約 %.0fGB を使うため、作業領域がほとんど残りません。"
+                          "生成は通るかもしれませんが、step 1 に数分かかる・VAE デコードが極端に遅い、といった形で出ます。"
+                          "本アプリの実測は 24GB の環境のみで、この容量では検証していません。"
+                          % (total_gb, VRAM_UNET_GB))
+        return out
+    out["level"] = "warn"
+    out["message"] = ("GPU の VRAM が %.1fGB です。UNET だけで約 %.0fGB 必要なので、"
+                      "**このままでは生成が VRAM 不足で失敗する可能性が高い**です（ComfyUI 側のエラーとして出ます）。"
+                      "解像度を下げる・より小さい量子化の重みを使う等の調整が要ります。"
+                      "本アプリの実測は 24GB の環境のみで、少ない容量では検証していません。"
+                      % (total_gb, VRAM_UNET_GB))
+    return out
 
 
 def _combo_options(cfg: dict, cls: str, field: str) -> list[str] | None:

@@ -11,7 +11,7 @@
 
 <div class="top">
   <div class="brand">H3 Studio <small>MiniMax-H3 · ローカル</small></div>
-  <div class="sel">作品 <select id="projSel"></select> <button class="btn sec sm" id="projNew" title="新しい作品">＋</button></div>
+  <div class="sel">作品 <select id="projSel"></select> <button class="btn sec sm" id="projNew" title="新しい作品">＋</button> <button class="btn sec sm" id="projEdit" title="作品の設定">✎ 設定</button></div>
   <div class="sel">ショット <b id="shotId">S01</b></div>
   <div class="spacer"></div>
   <div class="gpu" id="gpuBar">
@@ -31,7 +31,7 @@
       <span class="right"><button class="btn sec sm" id="btnHistory">履歴から呼び出す</button></span></h2>
     <div class="tabs">
       <button class="tab" data-mode="A">おまかせ<small>1行</small></button>
-      <button class="tab on" data-mode="B">推奨<small>4欄</small></button>
+      <button class="tab on" data-mode="B">推奨<small>6欄</small></button>
       <button class="tab" data-mode="C">詳細<small>全キー</small></button>
     </div>
 
@@ -39,8 +39,8 @@
       <div class="field"><label class="req">1行で</label>
         <div>
           <textarea class="in" id="aText" rows="2" placeholder="夕方の屋上で彼女が空を見上げる"></textarea>
-          <div class="hint">「展開」を押すと4欄（推奨）に開きます。どう解釈したかを確認してから生成できます。</div>
-          <button class="btn sec sm" id="btnExpand" style="margin-top:6px">4欄に展開 <span class="t">LLM</span></button>
+          <div class="hint">「展開」を押すと推奨モードの欄に開きます。どう解釈したかを確認してから生成できます（展開されるのは場所・動き・カメラ・セリフの4つ。開始の構図と画面内の文字は必要なら手で足す）。</div>
+          <button class="btn sec sm" id="btnExpand" style="margin-top:6px">欄に展開 <span class="t">LLM</span></button>
         </div></div>
     </div>
 
@@ -142,7 +142,7 @@
       <button class="btn sec" id="btnRetry">やり直す <span class="t">seed+1</span></button>
       <button class="btn sec" id="btnWrite">プロンプト.txt に書き出す</button>
       <span class="sp"></span>
-      <button class="btn sec" id="btnPreview" title="ComfyUI に投入（LM Studio を降ろしてから）">プレビュー生成 <span class="t" id="etaPreview">608×352 · 約7分</span></button>
+      <button class="btn sec" id="btnPreview" title="ComfyUI に投入（LM Studio を降ろしてから）">プレビュー生成 <span class="t" id="etaPreview">608×352 · 2.5〜7分</span></button>
       <button class="btn acc" id="btnFinal" title="ComfyUI に投入（LM Studio を降ろしてから）">本番生成 <span class="t" id="etaFinal">1344×768 · 約16分</span></button>
     </div>
   </div>
@@ -262,6 +262,45 @@
       <div class="hint">スタイル宣言・キャラ定義・参照素材は、作成後に「作品の設定」から。</div>
     </div>
     <div class="mf"><span class="sp"></span><button class="btn" id="btnCreateProj">作成</button></div>
+  </div>
+</div>
+
+<!-- ============ 作品の設定 ============ -->
+<div class="modalbg" id="mdProj">
+  <div class="modal" style="width:min(880px,100%)">
+    <div class="mh"><h2>作品の設定 <span class="sub" id="projEditName"></span></h2><button class="x" data-close="mdProj">×</button></div>
+    <div class="mb" style="overflow-y:auto">
+      <div class="field"><label>スタイル宣言<button class="q" data-help="helpPStyle">?</button></label>
+        <div>
+          <textarea class="in" id="pStyle" rows="2" placeholder="2D-animated, hand-drawn 2D anime with soft thin inked outlines, ..."></textarea>
+          <div class="help hidden" id="helpPStyle">プロンプトの STYLE にそのまま入る英語。空欄なら既定（手描き2Dアニメ）が使われる。</div>
+        </div></div>
+      <div class="field"><label>キャラ定義<button class="q" data-help="helpPSubj">?</button></label>
+        <div>
+          <input class="in mini" id="pImgFilter" placeholder="画像を検索（既定は切り抜き済みだけを表示。生画像はここで探す）" style="margin-bottom:6px">
+          <div id="pSubjects"></div>
+          <button class="btn sec sm" id="pAddSubj">＋ キャラを追加</button>
+          <div class="help hidden" id="helpPSubj">1人 = 1エントリ。<b>説明</b>は参照画像の見た目を日本語で（プロンプトの REFS に使われる）。<b>画像</b>は input\ にある切り抜き済み（_cut）を紐づける。切り抜きは画面の「＋ 切り抜く」から。</div>
+        </div></div>
+      <div class="field"><label>参照動画<button class="q" data-help="helpPVid">?</button></label>
+        <div>
+          <div id="pVideos"></div>
+          <button class="btn sec sm" id="pAddVid">＋ 動画を追加</button>
+          <div class="help hidden" id="helpPVid">モーション／カメラ参照。<b>説明</b>には動きの内容を書く（ブリーフの REFS に出る）。ファイルは ComfyUI の input\ に置いたものから選ぶ。</div>
+        </div></div>
+      <div class="field"><label>既定値</label>
+        <div class="row">
+          <span>尺 <select class="in mini" id="pDuration" style="width:70px"><option>4</option><option>6</option><option>8</option><option>10</option></select> 秒</span>
+          <span>比率 <select class="in mini" id="pRatio" style="width:90px"><option>16:9</option><option>9:16</option><option>1:1</option></select></span>
+          <span>本番 seed <input class="in mini" id="pSeed" type="number" style="width:110px"></span>
+        </div></div>
+      <div class="field"><label>音楽の既定<button class="q" data-help="helpPMusic">?</button></label>
+        <div>
+          <input class="in mini" id="pMusic" placeholder="N/A（無し）">
+          <div class="help hidden" id="helpPMusic">ブリーフの MUSIC に入る。N/A なら BGM 無し。書くなら英語で楽器・速さを（例: Sparse piano notes at a slow tempo）。</div>
+        </div></div>
+    </div>
+    <div class="mf"><span class="hint" id="pMsg"></span><span class="sp"></span><button class="btn" id="pSave">保存</button></div>
   </div>
 </div>
 

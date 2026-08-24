@@ -1,5 +1,7 @@
 # H3 Studio
 
+**New here? Start with [docs/00_はじめに.md](docs/00_はじめに.md)** — a nine-chapter walkthrough of the actual screens (setup → your first clip → how to fill each field → troubleshooting). Japanese only for now.
+
 A local web app that takes you from a rough idea to a finished MiniMax-H3 video in one screen: write a structured prompt with a local LLM, cut out your characters with SAM3, submit to ComfyUI, and inspect the result.
 
 **Source art → cutout → reference images → brief → prompt → preview render → final render → accept & record.**
