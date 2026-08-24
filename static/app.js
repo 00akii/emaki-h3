@@ -414,7 +414,6 @@
       if (n) gpuPill.textContent = (n.used_mb / 1024).toFixed(1) + " / " + (n.total_mb / 1024).toFixed(1) + " GB";
       gpuPill.className = "pill" + (g.note ? " cloud" : ""); gpuPill.title = g.note || "";
       if (g.note && !state.gpuNoteShown) { log("⚠ " + g.note, "warn"); state.gpuNoteShown = true; }
-      if (c && c.up && c.reserve_vram === false && !state.reserveHintShown) { state.reserveHintShown = true; log("ℹ ComfyUI は --reserve-vram なしで起動しています。20GB の UNET を動的ロードが全部載せてサンプリングが 10 倍遅くなることがあるため（実測）、起動引数に --reserve-vram 3 を足すのを推奨（未検証）。アプリ側は毎回 VRAM を空けてから投入する設定で回避しています", ""); }
     } catch (_) {}
   }
 

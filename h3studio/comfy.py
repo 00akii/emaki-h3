@@ -647,8 +647,11 @@ def _ws_listen(cfg: dict, job: Job, on_done, after_connect=None):
                         t0 = job.progress.get("sampler_t0")
                         if d.get("node") == "sample" and d.get("value") == 1 and t0 and time.time() - t0 > 300 and not job.progress.get("slow_warned"):
                             job.progress["slow_warned"] = True
-                            job.add("⚠ step 1 に %d 秒。動的 VRAM ローダーが UNET を全部載せて重みを出し入れしている疑い（実測: 空き 20GB で 606s）。"
-                                    "ComfyUI を --reserve-vram 3 で起動するか、config.gen.free_cache_before を true に" % int(time.time() - t0), "warn")
+                            # 2026-08-25 の実測（15本）: 同じ空き VRAM から step1 が 6 秒のことも 494 秒のこともある。
+                            # 原因は特定できていないので、原因も対処も断定しない。ユーザーに要るのは「待っていいのか」だけ。
+                            job.add("⚠ step 1 に %d 秒かかっています。モデルの読み込みで時間がかかることがあります"
+                                    "（実測で 6 秒〜8 分。原因は分かっていません）。**そのまま待ってください。**"
+                                    "ごくまれに完了も中止もできなくなります。その場合だけ ComfyUI の再起動が要ります" % int(time.time() - t0), "warn")
                 elif t == "execution_error":
                     job.error = (d.get("exception_message") or "execution_error")[:800]
                     job.add("ComfyUI エラー: " + job.error, "bad")
@@ -889,15 +892,31 @@ def active_job() -> Job | None:
 
 
 def cancel_job(cfg: dict, job: Job) -> dict:
+    """中止を要求する。**ComfyUI がこのジョブを知らなくなっていたら、その場で終了させる。**
+
+    状態を進めるのは実行スレッドだけなので、ComfyUI が落ちた・再起動した後は
+    誰も `running` を終わらせられず、`active_job()` が塞がって次を投入できなくなる
+    （2026-08-25 に実際に起きた。アプリの再起動でしか直らなかった）。
+    """
     job._cancel = True
+    known = None                      # None = ComfyUI に問い合わせられなかった
     if job.prompt_id:
         try:
             q = queue_state(cfg)
+            known = job.prompt_id in q["running_ids"] or job.prompt_id in q.get("pending_ids", [])
             cancel_prompt(cfg, job.prompt_id, running=job.prompt_id in q["running_ids"])
         except Exception as e:
             return {"ok": False, "error": repr(e)}
     job.add("中止を要求", "warn")
-    return {"ok": True}
+
+    # ComfyUI 側に居ないなら、実行スレッドはもう状態を進められない。ここで畳む。
+    # 投入前（prompt_id 無し）で止めた場合も同じ。
+    if known is False or not job.prompt_id:
+        if job.state in ("queued", "unloading", "submitted", "running", "inspecting"):
+            job.state = "cancelled"; job.finished = time.time()
+            job.add("ComfyUI 側にこのジョブが無いため、中止として確定した", "warn")
+            job.save()
+    return {"ok": True, "state": job.state}
 
 
 def load_saved_jobs(limit=30) -> list[dict]:

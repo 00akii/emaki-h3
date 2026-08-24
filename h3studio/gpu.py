@@ -16,11 +16,28 @@ from . import llm, comfy
 
 def nvidia() -> dict | None:
     try:
-        r = subprocess.run(["nvidia-smi", "--query-gpu=memory.used,memory.total,utilization.gpu,power.draw",
+        r = subprocess.run(["nvidia-smi",
+                            "--query-gpu=memory.used,memory.total,utilization.gpu,power.draw,"
+                            "enforced.power.limit,power.max_limit",
                             "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=10)
         if r.returncode == 0 and r.stdout.strip():
-            used, total, util, pw = [x.strip() for x in r.stdout.strip().split(",")[:4]]
-            return {"used_mb": int(float(used)), "total_mb": int(float(total)), "util": int(float(util)), "power_w": float(pw)}
+            c = [x.strip() for x in r.stdout.strip().split(",")]
+            used, total, util, pw = c[:4]
+            out = {"used_mb": int(float(used)), "total_mb": int(float(total)),
+                   "util": int(float(util)), "power_w": float(pw)}
+            # 電力リミット。**絞られていると生成が遅くなるうえ、遅くなり方がフェーズごとに違う**
+            # （サンプリング＝演算律速は強く縛られ、モデルのロード＝転送律速はあまり縛られない）。
+            # 速度を測る前に必ず見る。ノート PC や省電力設定、MSI Afterburner のプロファイルで下がる
+            try:
+                lim, mx = float(c[4]), float(c[5])
+                if mx > 0:
+                    out["power_limit_w"] = round(lim)
+                    out["power_max_w"] = round(mx)
+                    out["power_pct"] = round(lim / mx * 100)
+                    out["power_throttled"] = lim < mx * 0.95
+            except (IndexError, ValueError):
+                pass
+            return out
     except Exception:
         pass
     return None
@@ -34,7 +51,9 @@ def comfy_state(cfg: dict) -> dict:
         argv = (d.get("system") or {}).get("argv") or []
         out = {"up": True, "version": (d.get("system") or {}).get("comfyui_version"),
                # 実測: 動的 VRAM ローダーが空き≥モデルサイズを見ると 20GB の UNET を全部載せて活性化メモリと出し入れ → 10 倍遅い。
-               # --reserve-vram N で空きを少なく見せるのが筋の良い対処（推奨・未検証）
+               # ComfyUI の起動引数に --reserve-vram があるかを見るだけ。**「渡っている」と「効いている」は別物**で、
+               # 効いているかは外から観測できない（変わるのは ComfyUI 内部のロード判断用の値で、ドライバの空きは変わらない）。
+               # なお 2026-08-25 の実測15本では、付けても詰まり・発散のどちらも防げなかった（設計書 §9a 追記3）
                "reserve_vram": any(str(a).startswith("--reserve-vram") for a in argv),
                "vram_free_gb": round(dev.get("vram_free", 0) / 1e9, 1),
                "vram_total_gb": round(dev.get("vram_total", 0) / 1e9, 1),

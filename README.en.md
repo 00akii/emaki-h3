@@ -114,7 +114,21 @@ Constraints (all measured): `refine_iterations` must stay at 1 (2+ degrades the 
 - **If ComfyUI is holding ~9 GB of VRAM, the LLM takes 35 s per prompt** versus 15 s with ComfyUI stopped. The header GPU pill shows this
 - **Worse: loading LM Studio while ComfyUI holds VRAM puts part of the model on the CPU.** `lms ps` still reports the full size (17.16 GB), so nothing looks wrong — but prompt generation went from 45 s to 218 s. **Freeing ComfyUI afterwards does not move those weights back to the GPU**; the model has to be reloaded. The app frees ComfyUI first (only when a reload is actually needed), then measures the **VRAM delta across the load** to verify residency, and reloads once if it falls short (`gpu.prepare_for_llm`). **Comparing against total VRAM cannot detect this** — ComfyUI holds VRAM too, so the total exceeds the model size even when half of it is on the CPU. `/system_stats`'s `vram_free` is ComfyUI's own accounting and is not device-wide either
 - **To disable thinking, use `reasoning_effort: "none"`.** `chat_template_kwargs.enable_thinking:false` alone does not work
-- **Renders after the first can be 10× slower (ComfyUI 0.33 dynamic VRAM loader).** With more free VRAM than the ~20 GB UNET, it loads everything, then swaps weights per block to make room for activations — step 1 took 606 s versus 15 s when only 17.7 GB was free. The app calls `/free` before submitting and inserts a purge before sampling and before VAE decode. **The cleaner fix is starting ComfyUI with `--reserve-vram 3`** (untested here)
+- **Render time varies a lot between runs. The same settings are sometimes fast and sometimes slow.** Measured over 15 runs on 2026-08-25 (RTX 4090, 360 W power limit, preview 608×352, 192f, 6 steps):
+
+  | Situation | Total |
+  |---|---|
+  | One render at a time (the model is reloaded every time) | **126 / 128 / 133 / 142 s** — but one run took **336 s** |
+  | Back-to-back renders with the same settings (model stays loaded) | **45 / 49 s** |
+
+  On the slow runs it is **step 1 (loading the model)** that stretches — 213–494 s versus 6–10 s on the fast ones. **We do not know what makes the difference.**
+  Free VRAM does not explain it: **the same 20638 MB of free VRAM produced step 1 times of 10.28 s and 212.93 s** (another pair behaved the same way).
+  Every stall we observed happened on a run that **reloaded the model**, but reloading does not reliably cause one (3 of 9 runs).
+  **Rarely, a run can neither finish nor be cancelled** (`/interrupt` is only checked at block boundaries). **Only restarting ComfyUI recovers from that.**
+- **⚠ `--reserve-vram 3` did not help.** This README used to recommend it as the cleaner fix; **that was retracted after measuring it on 2026-08-25.**
+  With the flag set, stalls still happened (step 1 of 494 s), and a run still ended up neither finishing nor cancellable.
+  Note that **whether the flag is honoured cannot be observed from outside** — it changes ComfyUI's internal load accounting, not the free VRAM the driver reports —
+  so the only available evidence is behavioural, and **the behaviour did not improve**
 - **ComfyUI's HTTP stalls while thrashing** — `/interrupt` took 41 s to answer. Press cancel and wait
 - On Windows, `pkill -f "python server.py"` does not work. Use `Get-NetTCPConnection -LocalPort 8765 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`
 

@@ -55,7 +55,8 @@ DEFAULTS = {
         # free_cache_before=True: 実行キャッシュも消して H3 ノード（参照エンコード）を毎回走らせる。CPU のテキストエンコード ~170s が
         # 毎回かかるが、サンプラー直前に purge → UNET 読み込みという「速いパターン」（step1 15s）を確実に再現できる。
         # False にすると seed 違いの再生成で参照エンコードは省けるが、動的 VRAM ローダーが空き 20GB を見て UNET を全部載せ、
-        # 活性化メモリと重みを追い出し合って step1 が 600s（実測）。ComfyUI を --reserve-vram 3 で起動すれば False でも良い（未検証）
+        # step1（モデルの読み込み）は同じ設定でも 6 秒〜8 分とばらつく。原因は特定できていない（設計書 §9a 追記2・追記3）。
+        # **`--reserve-vram 3` は効かなかった**（2026-08-25 実測15本。詰まりも発散も防がない）ので、False に落とす根拠にはならない
         "free_cache_before": True,
         "purge_node": "LayerUtility: PurgeVRAM V2",
         # プロンプト生成の直前に ComfyUI の VRAM を空ける。**空けてから LLM を載せる**のが重要で、
