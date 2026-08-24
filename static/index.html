@@ -75,7 +75,7 @@
           <div class="row" id="framChips" style="margin-bottom:6px"></div>
           <input class="in mini" id="bFraming" placeholder="空欄なら LLM が選ぶ（たいてい全身の引き）">
           <div class="hint" id="framingCheck"></div>
-          <div class="help hidden" id="helpFram"><b>1フレーム目の構図</b>。高さ（目線／ハイ／ロー）と視点（正面／真横／背面）は確実に効く。<b>寄り</b>（胸から上より近い）を選んでカメラが引かない場合は、本文を画角内の要素に絞る修正が自動で入る（実測: 絞らないと×9、絞ると×0）。寄りから引く組み合わせは成立しにくいので警告が出る。<span class="bad">ダッチアングル・真俯瞰・望遠</span> は効かないので選択肢にない。</div>
+          <div class="help hidden" id="helpFram"><b>1フレーム目の構図</b>。高さ（目線／ハイ／ロー）と視点（正面／真横／背面）は確実に効く。<b>寄り</b>（胸から上より近い）を選んでカメラが引かない場合は、プロンプトの描写を画角内の要素に絞る修正が自動で入る（実測: 絞らないと×9、絞ると×0）。寄りから引く組み合わせは成立しにくいので警告が出る。<span class="bad">ダッチアングル・真俯瞰・望遠</span> は効かないので選択肢にない。</div>
         </div></div>
       <div class="field"><label>カメラ（終端）<button class="q on" data-help="helpCam">?</button></label>
         <div>
@@ -92,7 +92,7 @@
       <div class="field"><label>セリフ<button class="q" data-help="helpDia">?</button></label>
         <div>
           <input class="in mini" id="bDialogue" placeholder="少女（落ち着いた低め）「…」　なければ空欄">
-          <div class="help hidden" id="helpDia">話者（性別・年齢・声質）「本文」の形。カギカッコの中は一字一句そのまま入ります。8秒なら日本語30文字以内が目安。</div>
+          <div class="help hidden" id="helpDia">キャラ（性別・年齢・声質）「セリフ」の形。カギカッコの中は一字一句そのまま入ります。8秒なら日本語30文字以内が目安。</div>
         </div></div>
     </div>
 
@@ -239,7 +239,7 @@
         <label class="mini"><input type="checkbox" id="egSheet"> コンタクトシートも送る</label>
         <button class="btn sec sm" id="btnEgSave">Eagle 設定を保存</button>
       </div>
-      <div class="hint"><b>送るのは音付きの1本だけ</b>です。ComfyUI の <code>SendToEagleVideo</code> は無音版と音付き版の2本を送ってしまうため使っていません。注釈にはプロンプト本文・ブリーフ・計測値（フレーム数／実尺／bit_rate／音量／フレーム間差分）が入り、タグは作品名・ショットID・本番/プレビュー・比率が付きます。</div>
+      <div class="hint"><b>送るのは音付きの1本だけ</b>です。ComfyUI の <code>SendToEagleVideo</code> は無音版と音付き版の2本を送ってしまうため使っていません。注釈にはプロンプト・ブリーフ・計測値（フレーム数／実尺／bit_rate／音量／フレーム間差分）が入り、タグは作品名・ショットID・本番/プレビュー・比率が付きます。</div>
     </div>
     <div class="mf"><span class="sp"></span><button class="btn sec" id="btnRecheck">再チェック</button></div>
   </div>
@@ -250,7 +250,7 @@
   <div class="modal wide">
     <div class="mh"><h2>履歴から呼び出す <span class="sub">ブリーフとプロンプトを左右に戻す</span></h2><button class="x" data-close="mdHistory">×</button></div>
     <div class="mb">
-      <div class="row"><input class="in mini" id="histQ" placeholder="検索（作品・ショット・本文）" style="max-width:320px"><button class="btn sec sm" id="histSearch">検索</button>
+      <div class="row"><input class="in mini" id="histQ" placeholder="検索（作品・ショット・プロンプト）" style="max-width:320px"><button class="btn sec sm" id="histSearch">検索</button>
         <label style="font-size:12px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="histThisOnly" checked>この作品だけ</label></div>
       <div class="mlist" id="histList"><div class="empty">読み込み中…</div></div>
     </div>

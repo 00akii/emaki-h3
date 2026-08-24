@@ -91,8 +91,8 @@ Everything environment-specific lives in **`config.json`**; there are no paths i
 4. **Generate prompt** → the prompt and a mechanical lint report (ERROR/WARN) appear on the right
 5. Edit and **re-lint**. When happy, **write to `プロンプト.txt`** (an archive copy is written too, and it enters the project history)
 6. **Recall from history** to restore a past brief and prompt
-7. **Preview render** (608×352, ~7 min measured) → a 3×3 contact sheet, the video, and metrics (frame count, real duration, bit rate, loudness, inter-frame difference). **Re-submitting the same prompt with the same seed returns ComfyUI's cache** rather than re-rendering — bump the seed
-8. **Final render** (1344×768, 15.6–18 min measured). You get a warning if an un-cut image is selected — backgrounds leak at full resolution
+7. **Preview render** (608×352. **Timing varies a lot with the conditions — see the measured table under "Traps we hit"**) → a 3×3 contact sheet, the video, and metrics (frame count, real duration, bit rate, loudness, inter-frame difference). **Re-submitting the same prompt with the same seed returns ComfyUI's cache** rather than re-rendering — bump the seed
+8. **Final render** (1344×768, **15.6 min measured — from a single run** on 2026-08-23 with two reference images. **The GPU power limit at the time was not recorded, so conditions may differ**). You get a warning if an un-cut image is selected — backgrounds leak at full resolution
 9. **Accept this result** → overwrites `プロンプト.txt`, writes the archive, and records the video path, metrics and job id into the project's `shots[]`. **A human decides accept/reject; the app never judges**
 10. **Past jobs** lists everything submitted from the app. Reloading the page reconnects to a render still in progress
 
@@ -123,7 +123,7 @@ Constraints (all measured): `refine_iterations` must stay at 1 (2+ degrades the 
 
   On the slow runs it is **step 1 (loading the model)** that stretches — 213–494 s versus 6–10 s on the fast ones. **We do not know what makes the difference.**
   Free VRAM does not explain it: **the same 20638 MB of free VRAM produced step 1 times of 10.28 s and 212.93 s** (another pair behaved the same way).
-  Every stall we observed happened on a run that **reloaded the model**, but reloading does not reliably cause one (3 of 9 runs).
+  Every stall we observed happened on a run that **reloaded the model**, but reloading does not reliably cause one (**4 of the 8 runs that reloaded**; none of the 2 runs that did not).
   **Rarely, a run can neither finish nor be cancelled** (`/interrupt` is only checked at block boundaries). **Only restarting ComfyUI recovers from that.**
 - **⚠ `--reserve-vram 3` did not help.** This README used to recommend it as the cleaner fix; **that was retracted after measuring it on 2026-08-25.**
   With the flag set, stalls still happened (step 1 of 494 s), and a run still ended up neither finishing nor cancellable.

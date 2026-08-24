@@ -371,7 +371,7 @@ def check(text: str, mode=None, duration=None, expect_text=None) -> Report:
             r.error("D7", "%s に日本語がある" % n)
 
     words = len(re.findall(r"[A-Za-z][A-Za-z'\-]*", body))
-    r.note("本文語数: %d" % words)
+    r.note("プロンプトの語数: %d" % words)
     # 公式: 350-500語は「生成タスク」のみ。動画編集/継続タスクは元動画の複雑さに従うので対象外。
     editing_task = bool(re.match(r"\[[^\]]*(video editing|video continuation)",
                                  fields.get("summary", "").strip()))

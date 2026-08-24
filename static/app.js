@@ -376,7 +376,7 @@
     if (!j.models.length) list.innerHTML = `<div class="empty">モデル一覧が取れません。${j.cloud ? "base_url と API キーを確認" : "LM Studio が起動しているか確認"}してください。</div>`;
     j.models.forEach(m => {
       const row = document.createElement("div"); row.className = "mrow" + (m.id === j.current ? " on" : ""); row.dataset.id = m.id;
-      const lab = m.measured ? `<div class="lab ok">${esc(m.measured.label)} · ${m.measured.avg_seconds}秒/本</div>` : `<div class="lab warn">未検証 — このモデルでの合格率は測っていません</div>`;
+      const lab = m.measured ? `<div class="lab ok">${esc(m.measured.label)} · ${m.measured.avg_seconds}秒/回</div>` : `<div class="lab warn">未検証 — このモデルでの合格率は測っていません</div>`;
       row.innerHTML = `<div><div class="id">${esc(m.id)}${m.recommended ? '<span class="tag">推奨</span>' : ""}${m.loaded ? '<span class="tag" style="background:var(--ok-soft);color:var(--ok)">ロード済み</span>' : ""}</div>${lab}</div><div></div>`;
       row.onclick = () => { list.querySelectorAll(".mrow").forEach(x => x.classList.remove("on")); row.classList.add("on"); };
       list.appendChild(row);

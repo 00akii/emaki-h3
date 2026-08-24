@@ -160,7 +160,7 @@ def measured_labels() -> dict:
         out[m] = {
             "final": r.get("final_pass", 0), "first": r.get("first_pass", 0), "n": n,
             "avg_tries": r.get("avg_tries", 0), "avg_seconds": r.get("avg_seconds", 0),
-            "label": "検証済み %d/%d（一発 %d/%d・%.1f回）" % (r.get("final_pass", 0), n, r.get("first_pass", 0), n, r.get("avg_tries", 0)),
+            "label": "検証済み %d/%d（うち最初の1回で合格 %d/%d・平均 %.1f 回）" % (r.get("final_pass", 0), n, r.get("first_pass", 0), n, r.get("avg_tries", 0)),
         }
     return out
 
