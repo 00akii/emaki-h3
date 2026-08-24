@@ -1,3 +1,5 @@
+<img src="static/icon.svg" width="56" alt="">
+
 # 絵巻H3
 
 ローカル LLM で MiniMax-H3 の構造化プロンプトを書き、ComfyUI で生成し、結果を確認するまでを1画面でやる Web アプリ。
