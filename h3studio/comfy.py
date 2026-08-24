@@ -79,7 +79,7 @@ def clear_node_cache() -> None:
 
 
 def preflight(cfg: dict) -> dict:
-    """この ComfyUI で H3 Studio が動くかを見る。画面の「設定」に出す。"""
+    """この ComfyUI で 絵巻H3 が動くかを見る。画面の「設定」に出す。"""
     if not comfy_up(cfg):
         return {"comfy": False, "can_generate": False, "nodes": [],
                 "message": "ComfyUI に届きません（%s）" % cfg.get("comfy_url")}

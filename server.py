@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-H3 Studio — FastAPI サーバー。
+絵巻H3 — FastAPI サーバー。
 
   python server.py                → config.json の port（既定 8765）
   python server.py --port 8799    → ポートを上書き（別フォルダで試すときなど）
@@ -25,7 +25,7 @@ sys.path.insert(0, APP_DIR)
 from h3studio import config, project, llm, brief as briefmod, promptgen, comfy, gpu, cut, eagle, textcheck  # noqa: E402
 from h3studio import inspect as inspectmod  # noqa: E402
 
-app = FastAPI(title="H3 Studio", version="0.1.0")
+app = FastAPI(title="Emaki H3", version="0.1.0")
 app.mount("/static", StaticFiles(directory=os.path.join(APP_DIR, "static")), name="static")
 
 CFG = config.load()
@@ -771,10 +771,10 @@ def cut_check(body: dict = Body(...)):
 
 if __name__ == "__main__":
     import argparse, uvicorn
-    ap = argparse.ArgumentParser(description="H3 Studio")
+    ap = argparse.ArgumentParser(description="絵巻H3")
     ap.add_argument("--port", type=int, default=None, help="config.json の port を上書きする")
     ap.add_argument("--host", default="127.0.0.1", help="既定は 127.0.0.1（この PC からだけ）")
     a = ap.parse_args()
     port = a.port or int(cfg().get("port") or 8765)
-    print("H3 Studio  http://%s:%d  (config: %s)" % (a.host, port, cfg().get("_source")))
+    print("絵巻H3  http://%s:%d  (config: %s)" % (a.host, port, cfg().get("_source")))
     uvicorn.run(app, host=a.host, port=port, log_level="info")

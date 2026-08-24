@@ -142,7 +142,7 @@ def _annotation(job: dict, project: dict | None) -> str:
         L.append("bit_rate %s Mbps / 音量 mean %s dB max %s dB / フレーム間差分 %s"
                  % (ins.get("mbps"), au.get("mean_db"), au.get("max_db"), ins.get("frame_diff")))
     if res.get("gen_seconds"):
-        L.append("生成 %.1f 分（H3 Studio · job %s）" % (res["gen_seconds"] / 60, job.get("id")))
+        L.append("生成 %.1f 分（絵巻H3 · job %s）" % (res["gen_seconds"] / 60, job.get("id")))
     refs = (p.get("images") or []) + (p.get("videos") or [])
     if refs:
         L.append("参照: " + ", ".join(refs))
@@ -159,7 +159,7 @@ def _annotation(job: dict, project: dict | None) -> str:
 
 def _tags(cfg: dict, job: dict) -> list[str]:
     p = job.get("params") or {}
-    t = ["MiniMax-H3", "H3 Studio"]
+    t = ["MiniMax-H3", "絵巻H3"]
     if p.get("project"):
         t.append(p["project"])
     if p.get("shot_id"):

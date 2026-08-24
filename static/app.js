@@ -1,4 +1,4 @@
-/* H3 Studio — 段1〜3 のフロント。素の JS。 */
+/* 絵巻H3 — 段1〜3 のフロント。素の JS。 */
 (() => {
   const $ = (id) => document.getElementById(id);
   const state = {

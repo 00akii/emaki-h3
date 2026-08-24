@@ -1,4 +1,4 @@
-# H3 Studio
+# Emaki H3
 
 **New here? Start with [docs/00_はじめに.md](docs/00_はじめに.md)** — a nine-chapter walkthrough of the actual screens (setup → your first clip → how to fill each field → troubleshooting). Japanese only for now.
 
