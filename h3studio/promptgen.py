@@ -36,7 +36,10 @@ def lint(text: str, mode=None, duration=None, expect_text=None) -> dict:
             "errors": [{"code": c, "msg": m} for c, m in rep.errors],
             "warns": [{"code": c, "msg": m} for c, m in rep.warns],
             "info": list(rep.info),
-            "words": next((int(s.split(":")[1]) for s in rep.info if s.startswith("本文語数:")), None)}
+            # リンターの note 文字列から語数を拾う。**文言を変えたらここも直す**
+            # （2026-08-25、画面用に「本文語数」→「プロンプトの語数」へ変えたとき、ここを直し忘れて常に None になった）
+            "words": next((int(s.split(":")[1]) for s in rep.info
+                           if s.startswith("プロンプトの語数:") or s.startswith("本文語数:")), None)}
 
 
 def generate(cfg: dict, brief: str, mode=None, duration=None, tries=3, seed=None,
