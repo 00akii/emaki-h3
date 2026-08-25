@@ -696,6 +696,12 @@ def _ws_listen(cfg: dict, job: Job, on_done, after_connect=None):
 
 
 def _poll_until_done(cfg: dict, job: Job, on_done):
+    # ComfyUI が「履歴にも無い・キューにも無い」状態が続いたら、向こうはこのジョブを見失っている。
+    # ここで終わらせないと state が running のまま残り、active_job() が塞がって**新規投入が永久にできなくなる**
+    # （2026-08-25、ComfyUI が落ちた後・こちらから kill した後の両方で実際に起きた。アプリ再起動でしか回復しなかった）。
+    # 投入直後は一瞬どちらにも居ないことがあるので、連続で見失ったときだけ確定する。
+    lost = 0
+    LOST_LIMIT = 10          # 2 秒間隔 → 約 20 秒
     while True:
         if job._cancel:
             on_done("cancel"); return
@@ -714,11 +720,22 @@ def _poll_until_done(cfg: dict, job: Job, on_done):
             try:
                 q = queue_state(cfg)
                 if job.prompt_id in q["running_ids"]:
+                    lost = 0
                     if job.state != "running":
                         job.state = "running"; job.started = job.started or time.time(); job.add("ComfyUI 実行中", "now")
                 elif job.prompt_id in q["pending_ids"]:
+                    lost = 0
                     job.state = "submitted"
+                else:
+                    # ComfyUI には届いたのに、履歴にもキューにも居ない。落ちたか、外から止められた。
+                    lost += 1
+                    if lost >= LOST_LIMIT:
+                        job.error = ("ComfyUI がこのジョブを見失いました（履歴にもキューにも無い）。"
+                                     "ComfyUI が落ちたか、外から停止された可能性があります")
+                        job.add("⚠ " + job.error, "bad")
+                        on_done("error"); return
             except Exception:
+                # ComfyUI に届かないだけかもしれないので、見失った回数には数えない
                 pass
         time.sleep(2.0)
 
