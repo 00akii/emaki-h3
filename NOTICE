@@ -1,0 +1,26 @@
+絵巻H3 / Emaki H3 — NOTICE
+
+The MIT License in LICENSE covers **this application only**.
+
+Not included, and not covered by it:
+
+- **MiniMax-H3 model weights** — governed by the MiniMax H3 Community License Agreement.
+  Note its "Applicable Territory": worldwide **excluding the EU, the UK, South Korea and the United States**.
+  https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE
+- **ComfyUI**, **LM Studio**, **Eagle** — each under its own license.
+
+You obtain and run these yourself. See "必要なもの" / "What you need" in README.
+
+---
+
+絵巻H3 / Emaki H3 — 注記
+
+`LICENSE` の MIT ライセンスが対象にするのは、**このアプリ本体だけ**です。
+
+同梱しておらず、MIT の対象でもないもの:
+
+- **MiniMax-H3 の重み** — MiniMax H3 Community License Agreement に従います。
+  利用可能地域は「全世界から **EU・英国・韓国・米国を除く**」と定められています。
+- **ComfyUI**、**LM Studio**、**Eagle** — それぞれ各自のライセンス。
+
+これらは使う方がご自身で用意します。README の「必要なもの」を見てください。

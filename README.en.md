@@ -197,4 +197,4 @@ python tools/validate_graph.py
 ## License
 
 - **The app is MIT** — see [LICENSE](LICENSE)
-- **MiniMax-H3 weights are not bundled.** They are covered by the **MiniMax H3 Community License** (separate permission required in the US/EU/UK/South Korea). ComfyUI, LM Studio and Eagle are not bundled either
+- **MiniMax-H3 weights are not bundled.** They are covered by the **MiniMax H3 Community License** (separate permission required in the US/EU/UK/South Korea). ComfyUI, LM Studio and Eagle are not bundled either. **See [NOTICE](NOTICE) for what is excluded and under which terms**

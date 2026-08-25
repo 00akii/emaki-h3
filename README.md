@@ -259,6 +259,6 @@ python -m h3studio.config
 ## 公開にあたって
 
 - **アプリは MIT。**
-- **MiniMax-H3 の重みは同梱しない。** ライセンスは **MiniMax H3 Community License**（US/EU/UK/韓国は個別許諾）。ComfyUI・LM Studio・Eagle も同梱しない
+- **MiniMax-H3 の重みは同梱しない。** ライセンスは **MiniMax H3 Community License**（US/EU/UK/韓国は個別許諾）。ComfyUI・LM Studio・Eagle も同梱しない。**同梱しないものの一覧と条件は [NOTICE](NOTICE) に**
 - `config.json` `jobs/` `cutcache/` `usage.json` `projects/` は `.gitignore` 済み。**作品データを一緒に公開したい場合だけ `projects/` の行を外す**
 - 数値はすべて上記「動作確認済み環境」の実測
