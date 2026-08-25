@@ -15,7 +15,7 @@ comfy.py — ComfyUI への生成投入（段4）。
 """
 from __future__ import annotations
 import json, math, os, threading, time, uuid, urllib.request, urllib.error, urllib.parse
-from . import config, llm
+from . import config, llm, watermark
 
 JOBS: dict[str, "Job"] = {}
 # 直前に走ったジョブの「VRAM に載るモデルの組み合わせ」と、それが成功したか。vram_mode="auto" の判断に使う。
@@ -871,6 +871,11 @@ def run_job(cfg: dict, job: Job, inspect_fn=None, on_finish=None):
         _LAST_RUN.update({"sig": model_sig(vals), "ok": True})
         job.add("生成完了 %s（%.1f分）" % (vid["filename"], gen_sec / 60), "ok")
         job.result = {"video": vid, "gen_seconds": gen_sec}
+        # 透かし（既定 off）。**検査の前に焼く**——利用者に配られるファイルそのものを検査したいので。
+        # 失敗しても元の動画は壊れない（watermark.apply が一時ファイル経由で差し替える）
+        wm = watermark.apply(cfg, path, log=job.add)
+        if wm.get("ok"):
+            job.result["watermark"] = wm
         job.state = "inspecting"
         if inspect_fn:
             job.add("結果を検査中（ffmpeg）…", "now")

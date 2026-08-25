@@ -47,6 +47,14 @@
     "free_vram_before": true,
     "free_cache_before": true,
     "purge_node": "LayerUtility: PurgeVRAM V2",
+    "watermark": {
+      "enabled": false,
+      "image": "",
+      "opacity": 0.1,
+      "scale": 0.1,
+      "margin": 0.02,
+      "crf": 12
+    },
     "free_comfy_before_llm": true,
     "free_comfy_min_gb": 2,
     "vram_mode": "share"

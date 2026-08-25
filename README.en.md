@@ -139,6 +139,9 @@ Constraints (all measured): `refine_iterations` must stay at 1 (2+ degrades the 
 - Cutouts are always saved to `input\`
 - `check_cut`'s blob count is unreliable when hair or props connect (one person can read as three). It warns; **you decide**
 - **On-screen text is reliable only for everyday characters.** Hiragana, katakana, common JIS level-1 kanji and ASCII came out correctly 9/9, but **JIS level-2 kanji keep the right radical and get the wrong phonetic component, and variant forms (髙, 﨑) are silently normalized to the common form**. The failure mode is *a different real character*, not garbled shapes, so a reader who cannot read Japanese will not catch it. The app warns on input, but **a human must read the result**. Strings longer than 5 characters, multiple lines and vertical text are untested. Camera motion does not degrade the text (measured)
+- **An optional watermark can be burned into the bottom-right of the finished video** (`gen.watermark` in `config.json`; **off by default**).
+  It composites a grey mark — the app icon plus the word 絵巻 — at low opacity. **This is an ffmpeg post-process**, so the ComfyUI workflow is untouched.
+  **The audio stream is copied as-is.** A failure never damages the original (it writes to a temp file, then swaps). Opacity, size and margin are configurable, and `image` can point at your own file
 - The "auto" brief expansion (`/api/brief/expand`) does **not** handle the on-screen-text field yet; it and explanation-`.md` generation (`/api/prompt/notes`) are **unverified**
 - The past-jobs list reads every entry in `jobs/` and will slow down as it grows
 - The UI assumes `127.0.0.1` and **has no authentication — do not expose it**

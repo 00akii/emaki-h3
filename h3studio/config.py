@@ -59,6 +59,16 @@ DEFAULTS = {
         # **`--reserve-vram 3` は効かなかった**（2026-08-25 実測15本。詰まりも発散も防がない）ので、False に落とす根拠にはならない
         "free_cache_before": True,
         "purge_node": "LayerUtility: PurgeVRAM V2",
+        # 出来上がった動画の右下に、絵巻H3 のアイコンを薄く焼き込む（ffmpeg の後処理。ワークフローは触らない）。
+        # **既定は off。**他人の動画に黙って印を付けない。使う人が自分で on にする
+        "watermark": {
+            "enabled": False,
+            "image": "",        # 空なら static/watermark.png（灰色のアイコン＋「絵巻」）
+            "opacity": 0.10,    # 0.0〜1.0。主張ではなく印なので薄い
+            "scale": 0.10,      # 動画の幅に対する透かしの幅（横長なので高さは 1/4 程度）
+            "margin": 0.02,     # 動画の幅に対する余白
+            "crf": 12,          # 焼き込みは再エンコードになる。元の出力と同じ値
+        },
         # プロンプト生成の直前に ComfyUI の VRAM を空ける。**空けてから LLM を載せる**のが重要で、
         # 逆順（ComfyUI が抱えたまま load）だと LM Studio は GPU に半分しか載せず残りを CPU に置く。
         # `lms ps` の SIZE は満額を表示するので気づけない。実測（2026-08-23）: プロンプト生成 45秒 → 218秒。
