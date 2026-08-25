@@ -46,7 +46,9 @@ def main() -> int:
             return 1
         print("config.example.json は DEFAULTS と一致しています。")
         return 0
-    with open(path, "w", encoding="utf-8") as f:
+    # newline を明示する。既定だと Windows で CRLF になり、リポジトリ（.gitattributes で LF）と
+    # 中身が同じなのに毎回ずれて見える（同期の取りこぼし検査が誤検出する）
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(want)
     print("書き出し: %s (%d キー)" % (path, len(build())))
     return 0
