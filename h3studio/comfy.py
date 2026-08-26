@@ -18,9 +18,6 @@ import json, math, os, threading, time, uuid, urllib.request, urllib.error, urll
 from . import config, llm, watermark
 
 JOBS: dict[str, "Job"] = {}
-# 直前に走ったジョブの「VRAM に載るモデルの組み合わせ」と、それが成功したか。vram_mode="auto" の判断に使う。
-# プロセスを再起動したら消えてよい（分からなければ安全側の share に倒れる）。
-_LAST_RUN: dict = {"sig": None, "ok": False}
 JOBS_DIR = os.path.join(config.APP_DIR, "jobs")
 
 # ワークフロー JSON に該当ノードが無いときの最後の手段（2026-08 の検証環境の値）
@@ -491,29 +488,23 @@ def node_available(cfg: dict, class_name: str) -> bool:
     return ok
 
 
-def model_sig(values: dict) -> str:
-    """VRAM を占めるモデルの組み合わせ。これが前回と同じなら、載っているものを使い回せる。
-    サイズ・尺・seed は含めない（重みの出入りには関係しないため）。"""
-    return "|".join(str(values.get(k, "")) for k in
-                    ("unet_name", "weight_dtype", "lora_name", "lora_strength", "clip_name", "vae_name", "audio_vae_name"))
-
-
 def decide_vram_mode(cfg: dict, values: dict, llm_was_unloaded: bool) -> tuple[str, str]:
-    """"share" か "resident" のどちらで走らせるかを決める。返り値は (モード, 理由の一行)。"""
+    """"share" か "resident" のどちらで走らせるかを決める。返り値は (モード, 理由の一行)。
+
+    auto はかつて「直前の成功ジョブと同じモデル構成なら resident」を選んだが、2026-08-26 に廃止。
+    resident は purge1/purge2 を外して走るため、UNET(20GB) を抱えたまま VAE デコードに入って
+    スラッシングする（実測: step1 が 384 秒、デコード 10 分超、共有 GPU メモリへ 25GB 溢れ。
+    当夜の resident 2 本は 2/2 ハング、share 2 本は 2/2 成功）。
+    前提の「前のジョブのモデルが載ったまま」も成立しない——share ジョブは purge2 で UNET を
+    降ろして終わるからで、載ったまま残るのは resident 同士の連続だけ、そのとき必ず上を踏む。
+    resident が省けるのは share の step1（実測 10〜28 秒）だけで、割に合わない。"""
     g = cfg.get("gen") or {}
     mode = str(g.get("vram_mode", "share") or "share").lower()
     if mode == "resident":
-        return "resident", "設定が resident: /free も purge もしない"
-    if mode != "auto":
-        return "share", "設定が share: /free で降ろして purge を挟む"
-    sig = model_sig(values)
-    if llm_was_unloaded:
-        return "share", "auto: 直前まで LM Studio が GPU を持っていたので、載せ直しから始める"
-    if not _LAST_RUN.get("ok"):
-        return "share", "auto: 直前に成功したジョブが無い（初回か、前回が失敗）"
-    if _LAST_RUN.get("sig") != sig:
-        return "share", "auto: 前のジョブとモデル構成が違う"
-    return "resident", "auto: 前のジョブと同じモデル構成で、間に GPU を取られていない → 載せたまま使う"
+        return "resident", "設定が resident: /free も purge もしない（実験用。VAE デコードが詰まる既知の問題あり）"
+    if mode == "auto":
+        return "share", "auto: 常に share（resident は VAE デコードが詰まるため 2026-08-26 に廃止）"
+    return "share", "設定が share: /free で降ろして purge を挟む"
 
 
 def free_vram(cfg: dict, unload_models: bool = True, free_memory: bool = False) -> dict:
@@ -648,9 +639,12 @@ def _ws_listen(cfg: dict, job: Job, on_done, after_connect=None):
                         if d.get("node") == "sample" and d.get("value") == 1 and t0 and time.time() - t0 > 300 and not job.progress.get("slow_warned"):
                             job.progress["slow_warned"] = True
                             # 2026-08-25 の実測（15本）: 同じ空き VRAM から step1 が 6 秒のことも 494 秒のこともある。
-                            # 原因は特定できていないので、原因も対処も断定しない。ユーザーに要るのは「待っていいのか」だけ。
-                            job.add("⚠ step 1 に %d 秒かかっています。モデルの読み込みで時間がかかることがあります"
-                                    "（実測で 6 秒〜8 分。原因は分かっていません）。**そのまま待ってください。**"
+                            # 2026-08-26 判明: そのうち再現性のある遅さは vram_mode=resident（当時の auto が選択）が原因
+                            # （VRAM 満杯のまま UNET を載せ直してスラッシング。auto を常に share にして解消）。
+                            # share でもモデル読み直しが遅いことはあるので、警告自体は残す。
+                            job.add("⚠ step 1 に %d 秒かかっています。モデルの読み込みで時間がかかることがあります。"
+                                    "**そのまま待ってください。**何度も続くときは config.json の gen.vram_mode が"
+                                    " resident になっていないか確認してください（resident は VRAM が詰まる既知の問題があります）。"
                                     "ごくまれに完了も中止もできなくなります。その場合だけ ComfyUI の再起動が要ります" % int(time.time() - t0), "warn")
                 elif t == "execution_error":
                     job.error = (d.get("exception_message") or "execution_error")[:800]
@@ -836,9 +830,6 @@ def run_job(cfg: dict, job: Job, inspect_fn=None, on_finish=None):
             do_submit()
             _poll_until_done(cfg, job, on_done)
         res = outcome["res"]
-        if res in ("cancel", "error"):
-            # 途中で落ちた・止めた場合、VRAM に何が載っているか分からない。次は必ず share から始める
-            _LAST_RUN.update({"sig": None, "ok": False})
         if res == "cancel":
             job.state = "cancelled"; job.finished = time.time(); job.add("中止", "warn"); job.save()
             return
@@ -866,9 +857,6 @@ def run_job(cfg: dict, job: Job, inspect_fn=None, on_finish=None):
                 break
             time.sleep(0.5)
         gen_sec = round(time.time() - job.started, 1)
-        # ここまで来たら、このモデル構成が VRAM に載った状態で正常に終わっている。
-        # 次のジョブが同じ構成なら vram_mode="auto" が resident を選べる
-        _LAST_RUN.update({"sig": model_sig(vals), "ok": True})
         job.add("生成完了 %s（%.1f分）" % (vid["filename"], gen_sec / 60), "ok")
         job.result = {"video": vid, "gen_seconds": gen_sec}
         # 透かし（既定 off）。**検査の前に焼く**——利用者に配られるファイルそのものを検査したいので。
