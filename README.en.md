@@ -19,7 +19,7 @@ Japanese documentation: [README.md](README.md) — it is the primary document an
 | **ComfyUI** | 0.33 or later (the version that ships `MiniMaxH3ReferenceToVideo` and `SAM3_Detect` in core). Default `http://127.0.0.1:8189` |
 | **MiniMax-H3 weights** | UNET / Turbo LoRA / text encoder / video VAE / audio VAE. **Not bundled** — see License below |
 | **An H3 workflow JSON** | Saved from ComfyUI after running H3 once. The app reads only model names, sampler and output format from it |
-| **Python** | 3.10+, with all three of `fastapi`, `uvicorn` and `python-multipart`. **The app will not start without `python-multipart`** (you get `Form data requires "python-multipart" to be installed`). It is used to drop reference material in from the file manager |
+| **Python** | 3.10+, with `fastapi` and `uvicorn` (`pip install -r requirements.txt`). `python-multipart` is **optional** — install it to drag reference material in from the file manager. **Without it the app still starts and everything else works** |
 | **ffmpeg** | On PATH (used to inspect results, and to make thumbnails for reference videos) |
 | **LM Studio** (optional) | For writing prompts locally. Default `http://localhost:1234`; the `lms` CLI is also used. Not needed if you use a cloud LLM |
 | **Eagle** (optional) | To file finished videos |
@@ -43,7 +43,12 @@ Japanese documentation: [README.md](README.md) — it is the primary document an
 
 ## Run
 
+**Double-click `start.bat`** (Windows). It finds a Python for you, and if it cannot, it tells you what to do instead of closing.
+
+From a shell:
+
 ```bash
+pip install -r requirements.txt
 python server.py
 ```
 
@@ -54,6 +59,22 @@ python server.py --port 8799
 ```
 
 The UI opens even when LM Studio and ComfyUI are down — missing pieces show up in red under Settings.
+
+### If you use the ComfyUI portable build
+
+`ComfyUI_windows_portable` ships **its own Python**, and that one is not on your PATH — typing `python` finds nothing, or finds a different install. Install into that Python:
+
+```bat
+..\python_embeded\python.exe -m pip install -r requirements.txt
+..\python_embeded\python.exe server.py
+```
+
+To point `start.bat` at it:
+
+```bat
+set EMAKI_PYTHON=C:\...\ComfyUI_windows_portable\python_embeded\python.exe
+start.bat
+```
 
 ## Configure
 

@@ -183,6 +183,18 @@ def file_input(name: str):
 
 UPLOAD_MAX_MB = 512
 
+# **ドロップ取り込みは「あれば使える」機能にする。無い環境でもアプリは起動する。**
+# `UploadFile` / `Form` を使うルートがあると、FastAPI は**ルート登録の時点で**落ちる:
+#   RuntimeError: Form data requires "python-multipart" to be installed.
+# つまり素直に書くと **python-multipart が起動必須の依存**になり、入れていない人は画面すら開けない。
+# ComfyUI のポータブル版を使っている人は `python_embeded` に自分で入れる必要があり、
+# **ドロップを使う気が無い人にまでそれを強いる理由が無い**（ユーザーの指摘・2026-08-26）。
+try:
+    import multipart  # noqa: F401
+    HAS_UPLOAD = True
+except ModuleNotFoundError:
+    HAS_UPLOAD = False
+
 
 def _same_bytes(path: str, data: bytes) -> bool:
     """ディスクのファイルと受け取った中身が同一か。**サイズ一致だけでは判定できない**ので実際に照合する。
@@ -198,8 +210,16 @@ def _same_bytes(path: str, data: bytes) -> bool:
     return h.hexdigest() == hashlib.sha1(data).hexdigest()
 
 
-@app.post("/api/upload")
-async def upload(dest: str = Form("input"), file: UploadFile = File(...)):
+def _register_upload():
+    """`python-multipart` があるときだけ `/api/upload` を生やす。**関数の中に閉じ込めてあるのは、
+    デコレータの評価そのものが例外を投げるため**（モジュール直下に書くと import 時に落ちる）。"""
+
+    @app.post("/api/upload")
+    async def upload(dest: str = Form("input"), file: UploadFile = File(...)):
+        return await _do_upload(dest, file)
+
+
+async def _do_upload(dest: str, file):
     """エクスプローラーから素材をドロップしたときの受け口。
 
     **なぜアップロードが要るのか**: ブラウザはドロップされたファイルの**フルパスを渡さない**（仕様）。
@@ -240,6 +260,23 @@ async def upload(dest: str = Form("input"), file: UploadFile = File(...)):
         f.write(data)
     os.replace(tmp, p)          # 書き終わってから現れるようにする（一覧が半端なファイルを掴まない）
     return {"name": name, "existed": False, "dir": dest_dir}
+
+
+if HAS_UPLOAD:
+    _register_upload()
+
+
+@app.get("/api/features")
+def features():
+    """画面が「使える機能」を知るための入り口。**無い機能は、押せる顔をさせない**ため。
+
+    `upload` が false なら、ドロップの枠は出すが受け取らず、理由（`python-multipart` が要る）を出す。
+    黙って何も起きないのが一番たちが悪い —— 利用者には「壊れている」としか見えない。
+    """
+    return {"upload": HAS_UPLOAD,
+            "upload_hint": "" if HAS_UPLOAD else
+            "エクスプローラーからの取り込みには python-multipart が要ります（pip install python-multipart）。"
+            "入れなくても他の機能はそのまま使えます"}
 
 
 @app.get("/api/thumb/video/{name}")

@@ -1,0 +1,19 @@
+# 絵巻H3 / Emaki H3 を動かすのに必要な Python パッケージ
+#
+#   pip install -r requirements.txt
+#
+# ComfyUI のポータブル版（ComfyUI_windows_portable）を使っている場合は、
+# システムの Python ではなく、その中の Python に入れてください:
+#
+#   ..\python_embeded\python.exe -m pip install -r requirements.txt
+#
+# バージョンは固定していません。ComfyUI と同じ Python 環境に入れる人がいるため、
+# ここで固定すると向こうと衝突します。
+
+fastapi
+uvicorn
+
+# 任意。入れると、エクスプローラーから参照素材をドラッグ＆ドロップで取り込めます。
+# 無くてもアプリは起動し、ドロップ以外の機能はそのまま使えます
+# （画面には「python-multipart が要ります」と出ます）。
+python-multipart

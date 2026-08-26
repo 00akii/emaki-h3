@@ -267,6 +267,10 @@
       stop(e); el.classList.remove("dropping");
       const files = [...((e.dataTransfer && e.dataTransfer.files) || [])];
       if (!files.length) return;
+      // python-multipart が無い環境。**黙って何も起きないのが一番たちが悪い**ので理由を出す
+      if (state.features && state.features.upload === false) {
+        return toast(state.features.upload_hint || "この環境ではドロップ取り込みを使えません", "warn");
+      }
       const exts = typeof opts.exts === "function" ? opts.exts() : opts.exts;
       const okFiles = [], bad = [];
       files.forEach(f => (exts.includes((String(f.name).match(/\.[a-z0-9]+$/i) || [""])[0].toLowerCase()) ? okFiles : bad).push(f));
@@ -841,6 +845,8 @@
 
   // ---------- 起動 ----------
   (async () => {
+    // 使える機能を先に聞く。python-multipart が無い環境ではドロップ取り込みだけが落ちる（起動はする）
+    try { state.features = await api("/api/features"); } catch (_) { state.features = { upload: true }; }
     try { await loadConfig(); } catch (e) { toast("設定の読み込みに失敗: " + e.message, "bad"); }
     await loadCamera();
     await loadProjects();

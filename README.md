@@ -30,7 +30,7 @@ English: [README.en.md](README.en.md)
 | **ComfyUI** | 0.33 以降（`MiniMaxH3ReferenceToVideo` と `SAM3_Detect` が本体に入ったバージョン）。既定 `http://127.0.0.1:8189` |
 | **MiniMax-H3 の重み** | UNET / Turbo LoRA / テキストエンコーダ / 映像 VAE / 音声 VAE。**ライセンスの都合で同梱しません**（下記「公開にあたって」） |
 | **H3 のワークフロー JSON** | ComfyUI で一度動かして保存したもの。アプリはここからモデル名・サンプラー・出力形式だけを読む |
-| **Python** | 3.10 以降。`fastapi` `uvicorn` `python-multipart` の3つ。**`python-multipart` が無いと起動しません**（`Form data requires "python-multipart" to be installed` が出ます）。参照素材をエクスプローラーから落として取り込むために使います |
+| **Python** | 3.10 以降。`fastapi` と `uvicorn` が要ります（`pip install -r requirements.txt`）。`python-multipart` は**任意**で、入れるとエクスプローラーから参照素材をドロップして取り込めます。**無くてもアプリは起動し、他の機能はそのまま使えます** |
 | **ffmpeg** | PATH に通っていること（結果の検査と、参照動画のサムネイル作成に使う） |
 | **LM Studio**（任意） | ローカルでプロンプトを書かせる場合。既定 `http://localhost:1234`。CLI `lms` も使う。クラウド LLM を使うなら不要 |
 | **Eagle**（任意） | 出来上がりを登録する場合 |
@@ -54,7 +54,12 @@ English: [README.en.md](README.en.md)
 
 ## 起動
 
+**`start.bat` をダブルクリック**（Windows）。Python を自動で探して起動します。見つからない場合は、どうすればよいかを表示して止まります。
+
+コマンドから起動する場合:
+
 ```bash
+pip install -r requirements.txt
 python server.py
 ```
 
@@ -65,6 +70,22 @@ python server.py --port 8799
 ```
 
 LM Studio と ComfyUI が無くても画面は開き、「設定」に赤で出ます。
+
+### ComfyUI のポータブル版を使っている場合
+
+`ComfyUI_windows_portable` は**自分専用の Python を同梱**していて、それは PATH に居ません。`python` と打っても見つからない、または別の Python が動きます。その Python に入れてください:
+
+```bat
+..\python_embeded\python.exe -m pip install -r requirements.txt
+..\python_embeded\python.exe server.py
+```
+
+`start.bat` に使わせたいときは、場所を教えてから実行します:
+
+```bat
+set EMAKI_PYTHON=C:\...\ComfyUI_windows_portable\python_embeded\python.exe
+start.bat
+```
 
 ## 設定
 
