@@ -252,11 +252,53 @@
   $("btnCreateProj").onclick = async () => { const n = $("newProjName").value.trim(); if (!n) return toast("作品名を入れてください", "warn"); await api("/api/projects", { method: "POST", body: JSON.stringify({ name: n }) }); close("mdNewProj"); await loadProjects(n); toast("作成しました: " + n); };
 
   // ---------- 参照素材 ----------
+  // ---------- エクスプローラーからのドロップ ----------
+  // 一覧の検索欄を自前で持たず、**探す仕事をエクスプローラーに任せる**ための入り口（ユーザーの案・2026-08-26）。
+  // ブラウザはフルパスを渡さない（仕様）ので、中身ごとサーバーに送って input\ に置く。
+  // 同名でサイズも同じなら既存を使う（同じものを2回落としただけ）。違えば連番で逃がす —— server.py の /api/upload 参照。
+  const IMG_DROP = [".png", ".jpg", ".jpeg", ".webp"], VID_DROP = [".mp4", ".webm", ".mov"];
+  function enableDrop(el, opts) {
+    if (!el || el._dropOn) return;
+    el._dropOn = true;
+    const stop = e => { e.preventDefault(); e.stopPropagation(); };
+    el.addEventListener("dragover", e => { stop(e); el.classList.add("dropping"); });
+    el.addEventListener("dragleave", e => { stop(e); el.classList.remove("dropping"); });
+    el.addEventListener("drop", async e => {
+      stop(e); el.classList.remove("dropping");
+      const files = [...((e.dataTransfer && e.dataTransfer.files) || [])];
+      if (!files.length) return;
+      const exts = typeof opts.exts === "function" ? opts.exts() : opts.exts;
+      const okFiles = [], bad = [];
+      files.forEach(f => (exts.includes((String(f.name).match(/\.[a-z0-9]+$/i) || [""])[0].toLowerCase()) ? okFiles : bad).push(f));
+      if (bad.length) toast(bad.length + " 件は扱えない種類です: " + bad.slice(0, 2).map(f => f.name).join(", "), "warn");
+      if (!okFiles.length) return;
+      const dest = typeof opts.dest === "function" ? opts.dest() : opts.dest;
+      toast(okFiles.length + " 件を取り込んでいます…");
+      const added = [];
+      for (const f of okFiles) {
+        const fd = new FormData(); fd.append("dest", dest); fd.append("file", f, f.name);
+        try {
+          const r = await fetch("/api/upload", { method: "POST", body: fd });   // FormData なので api() は使わない
+          let j = null; try { j = await r.json(); } catch (_) {}
+          if (!r.ok) { toast(f.name + ": " + ((j && j.detail) || r.statusText), "bad"); continue; }
+          added.push(j.name);
+        } catch (err) { toast(f.name + ": " + err.message, "bad"); }
+      }
+      if (added.length) await opts.onDone(added);
+    });
+  }
+
   async function loadAssets() {
     const cutOnly = $("cutOnly").checked;
     const [im, vi] = await Promise.all([api("/api/assets/images?cut_only=" + (cutOnly ? "true" : "false")), api("/api/assets/videos")]);
+    // **選択済みは上限で切らずに必ず出す。** 並びは更新日時順なので、古い素材を選ぶと一覧から消え、
+    // 「選ばれていて生成にも使われるのに、画面で確認も解除もできない」状態になっていた（2026-08-26 に実機で2本発見）
+    const pinFirst = (items, isOn, cap) => {
+      const on = items.filter(x => isOn(x.name));
+      return on.concat(items.filter(x => !isOn(x.name)).slice(0, Math.max(0, cap - on.length)));
+    };
     const box = $("imgRefs"); box.innerHTML = "";
-    im.items.slice(0, 40).forEach(it => {
+    pinFirst(im.items, n => state.images.has(n), 40).forEach(it => {
       const b = document.createElement("button"); b.className = "ref" + (state.images.has(it.name) ? " on" : ""); b.title = it.name;
       b.innerHTML = `<span class="chk">✓</span><img loading="lazy" src="/api/file/input/${encodeURIComponent(it.name)}" alt="">${it.cut ? "" : '<span class="raw">生</span>'}<span>${esc(it.name.replace(/\.(png|jpg|jpeg|webp)$/i, ""))}</span>`;
       b.onclick = () => { if (state.images.has(it.name)) state.images.delete(it.name); else { if (state.images.size >= 9) return toast("画像は9枚まで", "warn"); state.images.add(it.name); } b.classList.toggle("on"); updateCounts(); };
@@ -264,7 +306,7 @@
     });
     const add = document.createElement("button"); add.className = "ref add"; add.innerHTML = "＋<small>切り抜く</small>"; add.title = "SAM3 で人物を単色背景に抜く"; add.onclick = openCut; box.appendChild(add);
     const vb = $("vidRefs"); vb.innerHTML = "";
-    vi.items.slice(0, 20).forEach(it => {
+    pinFirst(vi.items, n => state.videos.has(n), 20).forEach(it => {
       const b = document.createElement("button"); b.className = "ref vid" + (state.videos.has(it.name) ? " on" : ""); b.title = it.name;
       // 静止時は先頭フレーム（= エクスプローラーと同じ絵）。ホバーしたときだけ実物を読んで再生する。
       // 全部を <video> にすると、Range 非対応のため 1 本 2.6MB × 20 本を読みに行く（h3studio/thumbs.py 参照）
@@ -284,6 +326,27 @@
       };
       b.onclick = () => { if (state.videos.has(it.name)) state.videos.delete(it.name); else { if (state.videos.size >= 3) return toast("動画は3本まで", "warn"); state.videos.add(it.name); } b.classList.toggle("on"); updateCounts(); };
       vb.appendChild(b);
+    });
+    // エクスプローラーから直接落とせるようにする。落としたものは選択済みにして先頭に出す
+    enableDrop(box, {
+      dest: "input", exts: IMG_DROP,
+      onDone: async names => {
+        const room = 9 - state.images.size;
+        names.slice(0, Math.max(0, room)).forEach(n => state.images.add(n));
+        await loadAssets();
+        toast(names.length > room ? ("画像は9枚まで。" + room + " 枚だけ選びました") : (names.length + " 枚を追加しました"),
+              names.length > room ? "warn" : "");
+      }
+    });
+    enableDrop(vb, {
+      dest: "input", exts: VID_DROP,
+      onDone: async names => {
+        const room = 3 - state.videos.size;
+        names.slice(0, Math.max(0, room)).forEach(n => state.videos.add(n));
+        await loadAssets();
+        toast(names.length > room ? ("動画は3本まで。" + room + " 本だけ選びました") : (names.length + " 本を追加しました"),
+              names.length > room ? "warn" : "");
+      }
     });
     updateCounts();
   }
@@ -653,15 +716,27 @@
     $("btnCutDetect").disabled = !!env.reason;
     await loadCutSources();
   }
-  async function loadCutSources() {
+  async function loadCutSources(pin) {
     const src = document.querySelector('input[name=cutSrc]:checked').value;
     state.cut.source = src;
     const box = $("cutSrcList"); box.innerHTML = '<div class="empty">読み込み中…</div>';
+    // 落とし先は「いま見ているソース」。元イラスト側なら raw_dir、input 側なら input に置く
+    enableDrop(box, {
+      dest: () => document.querySelector('input[name=cutSrc]:checked').value,
+      exts: IMG_DROP,
+      onDone: async names => { await loadCutSources(names[0]); toast(names.length + " 枚を取り込みました"); }
+    });
     const j = await api(src === "raw" ? "/api/assets/raw" : "/api/assets/images?cut_only=false");
     let items = j.items || [];
     if (src === "input") items = items.filter(i => !i.cut);           // 切り抜き済みは元画像にしない
     box.innerHTML = "";
-    if (!items.length) { box.innerHTML = `<div class="empty">${src === "raw" ? "元イラストのフォルダ（config.raw_dir）が空です" : "input に未切り抜きの画像がありません"}</div>`; return; }
+    if (!items.length) {
+      // 空でもドロップは受けたいので return しない（ここで return すると落とす場所が無くなる）
+      box.innerHTML = `<div class="empty">${src === "raw" ? "元イラストのフォルダ（config.raw_dir）が空です" : "input に未切り抜きの画像がありません"}<br><small>エクスプローラーから画像をここに落とせます</small></div>`;
+      return;
+    }
+    // 落としたばかりのものは上限で切られないよう先頭に固定する（既存ファイルだと更新日時が古く、一覧に出ないことがある）
+    if (pin) items = items.filter(x => x.name === pin).concat(items.filter(x => x.name !== pin));
     items.slice(0, 40).forEach(it => {
       const b = document.createElement("button"); b.className = "ref"; b.title = it.name;
       b.innerHTML = `<span class="chk">✓</span><img loading="lazy" src="/api/file/${src === "raw" ? "raw" : "input"}/${encodeURIComponent(it.name)}" alt=""><span>${esc(it.name.replace(/\.[a-z]+$/i, ""))}</span>`;
@@ -671,6 +746,7 @@
         $("cutName").value = suggestCutName(it.name);
       };
       box.appendChild(b);
+      if (it.name === pin) b.onclick();      // 落としたものはそのまま選んでおく（続けて「検出する」に進める）
     });
   }
   const suggestCutName = (src) => {

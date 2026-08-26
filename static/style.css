@@ -68,6 +68,9 @@ h2 .right{margin-left:auto;padding:0;display:flex;gap:6px}
 .q.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
 .refgrp{font-size:10.5px;color:var(--ink3);letter-spacing:.06em;margin:8px 0 4px;display:flex;gap:8px;align-items:center}
 .refs{display:flex;gap:8px;flex-wrap:wrap}
+/* エクスプローラーからファイルを持ってきている間。落とせる場所だと分かるように枠を出す */
+.refs.dropping{outline:2px dashed var(--accent);outline-offset:3px;border-radius:5px;background:var(--accent-soft)}
+.refs .empty small{display:block;margin-top:4px;color:var(--ink3)}
 .ref{width:78px;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:var(--panel2);position:relative;cursor:pointer;padding:0;text-align:left}
 .ref img{display:block;width:100%;height:100px;object-fit:cover;background:#808080}
 .ref.vid img{height:62px}

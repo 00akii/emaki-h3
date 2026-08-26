@@ -15,7 +15,7 @@ from __future__ import annotations
 import io, json, os, re, sys, time, glob, mimetypes
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -179,6 +179,67 @@ def _safe_join(base: str, name: str) -> str:
 @app.get("/api/file/input/{name}")
 def file_input(name: str):
     return FileResponse(_safe_join(cfg()["comfy_input_dir"], name))
+
+
+UPLOAD_MAX_MB = 512
+
+
+def _same_bytes(path: str, data: bytes) -> bool:
+    """ディスクのファイルと受け取った中身が同一か。**サイズ一致だけでは判定できない**ので実際に照合する。
+    ディスク側はストリームで読む（512MB まで受けるので、丸ごとメモリに載せない）。"""
+    import hashlib
+    h = hashlib.sha1()
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+    except OSError:
+        return False
+    return h.hexdigest() == hashlib.sha1(data).hexdigest()
+
+
+@app.post("/api/upload")
+async def upload(dest: str = Form("input"), file: UploadFile = File(...)):
+    """エクスプローラーから素材をドロップしたときの受け口。
+
+    **なぜアップロードが要るのか**: ブラウザはドロップされたファイルの**フルパスを渡さない**（仕様）。
+    渡ってくるのは名前と中身だけなので、`input\\` に無いファイルは中身ごと受け取って置く以外にない。
+    一覧の検索欄を自前で作らず**探す仕事をエクスプローラーに任せる**ための土台（ユーザーの案・2026-08-26）。
+
+    **同名のときは中身で判断する。** 中身まで同じなら「同じものを2回落としただけ」として既存を使い、
+    違えば `名前_2.png` のように連番で逃がす。**黙って上書きはしない** ——
+    参照素材は生成の入力なので、勝手に差し替わると原因を追えなくなる。
+
+    **⚠ サイズ比較では足りない**（2026-08-26 のテストで踏んだ）。同じ寸法の単色 PNG 同士は
+    中身が違ってもバイト数が一致し、**別物を「同じ」と誤判定した**。ハッシュまで見ること。
+    """
+    dest_dir = {"input": cfg()["comfy_input_dir"], "raw": cfg()["raw_dir"]}.get(dest)
+    if not dest_dir or not os.path.isdir(dest_dir):
+        raise HTTPException(400, "置き場所が見つかりません: %s" % dest)
+    name = os.path.basename(file.filename or "")
+    stem, ext = os.path.splitext(name)
+    if not stem or ext.lower() not in (IMG_EXT + VID_EXT):
+        raise HTTPException(400, "扱えない種類です: %s" % (ext or name))
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "中身が空です: %s" % name)
+    if len(data) > UPLOAD_MAX_MB * 1024 * 1024:
+        raise HTTPException(413, "%d MB を超えています: %s" % (UPLOAD_MAX_MB, name))
+
+    p = os.path.join(dest_dir, name)
+    if os.path.isfile(p):
+        if os.path.getsize(p) == len(data) and _same_bytes(p, data):
+            return {"name": name, "existed": True, "dir": dest_dir}
+        n = 2
+        while os.path.isfile(os.path.join(dest_dir, "%s_%d%s" % (stem, n, ext))):
+            n += 1
+        name = "%s_%d%s" % (stem, n, ext)
+        p = os.path.join(dest_dir, name)
+    tmp = p + ".part"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, p)          # 書き終わってから現れるようにする（一覧が半端なファイルを掴まない）
+    return {"name": name, "existed": False, "dir": dest_dir}
 
 
 @app.get("/api/thumb/video/{name}")
