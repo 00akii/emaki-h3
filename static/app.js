@@ -572,7 +572,12 @@
     finally { stopTimer(); $("btnGen").disabled = false; }
   }
   $("btnGen").onclick = () => generate();
-  $("btnRetry").onclick = () => { const c = readSeed(); const s = (typeof c === "number" ? c : 0) + 1; $("seed").value = s; generate(s); };
+  // **プロンプトの「やり直す」は seed を進めない。**
+  // 実測: LM Studio は同じ seed を渡しても同じ文を返さない（MTP 投機デコード＋temperature 0.35。
+  // 同一ブリーフ・同一 seed で 28本中28本が本文不一致）。**seed を変えたから違う結果になる、ではない。**
+  // 以前はここで `$("seed").value` を +1 していたが、あの欄は**動画生成の seed と同じもの**なので、
+  // プロンプトを書き直すたびに動画の seed が勝手に進む副作用があった。
+  $("btnRetry").onclick = () => generate();
 
   function renderLint(l) {
     const b = $("lintBadges"); const list = $("lintList");
@@ -624,7 +629,7 @@
   state.job = null; state.jobData = null; state.resultJob = null; state.lastGenParams = null;
   let jobTimer = null, logShown = 0;
   const fmtMin = (s) => s == null ? "—" : (s >= 60 ? Math.floor(s / 60) + "分" + String(Math.round(s % 60)).padStart(2, "0") + "秒" : Math.round(s) + "秒");
-  const setBusy = (on) => { ["btnPreview", "btnFinal", "btnGen", "btnAgain", "btnAgainSeed", "btnToFinal"].forEach(id => { if ($(id)) $(id).disabled = on; }); $("btnCancel").style.display = on ? "" : "none"; };
+  const setBusy = (on) => { ["btnPreview", "btnFinal", "btnGen", "btnAgain", "btnAgainSeed", "btnAgainRand", "btnToFinal"].forEach(id => { if ($(id)) $(id).disabled = on; }); $("btnCancel").style.display = on ? "" : "none"; };
 
   async function startGeneration(mode, extra = {}) {
     // extra に prompt/images/… があれば（「もう一度」「本番へ」）それを使う。無ければ画面の値
@@ -695,7 +700,14 @@
   }
   // ジョブの設定（プロンプト・素材・尺・比率・seed）をそのまま使って投げ直す
   const fromJob = (p, over = {}) => Object.assign({ project: p.project, prompt: p.prompt, images: p.images || [], videos: p.videos || [], duration: p.duration, ratio: p.ratio, seed: p.seed, shot_id: p.shot_id, h3_mode: p.h3_mode, brief: p.brief }, over);
-  $("btnAgainSeed").onclick = () => { const p = state.resultJob && state.resultJob.params; if (!p) return; const s = (p.seed || 0) + 1; $("seed").value = s; startGeneration(p.mode, fromJob(p, { seed: s })); };
+  $("btnAgainSeed").onclick = () => { const p = state.resultJob && state.resultJob.params; if (!p) return; const s = (typeof p.seed === "number" ? p.seed : 0) + 1; $("seed").value = s; startGeneration(p.mode, fromJob(p, { seed: s })); };
+  // 大きく振りたいとき。**ComfyUI に -1 を渡すのではなく、ここで具体的な数字を決める**（noise_seed は min=0）。
+  // 数字にしておけば結果カードとジョブ記録に残り、良かった回をあとで再現できる
+  $("btnAgainRand").onclick = () => {
+    const p = state.resultJob && state.resultJob.params; if (!p) return;
+    const s = Math.floor(Math.random() * (SEED_MAX + 1));
+    $("seed").value = s; startGeneration(p.mode, fromJob(p, { seed: s }));
+  };
   $("btnToFinal").onclick = () => { const p = state.resultJob && state.resultJob.params; if (!p) return; $("seed").value = p.seed; startGeneration("final", fromJob(p)); };
   $("btnAdopt").onclick = async () => {
     const j = state.resultJob; if (!j) return; const p = j.params || {};

@@ -143,7 +143,7 @@
     <div class="actions">
       <button class="btn sec" id="btnCopy">コピー <span class="t">クリップボードへ</span></button>
       <button class="btn sec" id="btnLint">再検査</button>
-      <button class="btn sec" id="btnRetry">やり直す <span class="t">seed+1</span></button>
+      <button class="btn sec" id="btnRetry">やり直す <span class="t">もう一度書かせる</span></button>
       <button class="btn sec" id="btnWrite">プロンプト.txt に書き出す</button>
       <span class="sp"></span>
       <button class="btn sec" id="btnPreview" title="ComfyUI に投入（LM Studio を降ろしてから）">プレビュー生成 <span class="t" id="etaPreview">608×352 · 2.5〜7分</span></button>
@@ -170,7 +170,8 @@
       <div class="actions">
         <button class="btn acc" id="btnAdopt">この結果を採用 <span class="t">プロンプト.txt + アーカイブ + 作品に記録</span></button>
         <button class="btn sec" id="btnEagle" style="display:none">Eagle に送る <span class="t" id="eagleT">音付きの1本</span></button>
-        <button class="btn sec" id="btnAgainSeed">seed+1 で再生成 <span class="t">同じ seed は ComfyUI のキャッシュが返る</span></button>
+        <button class="btn sec" id="btnAgainSeed">seed+1 で再生成 <span class="t">隣を見る。同じ seed は ComfyUI のキャッシュが返る</span></button>
+        <button class="btn sec" id="btnAgainRand">ランダムで再生成 <span class="t">大きく振る。使った seed は残ります</span></button>
         <button class="btn sec" id="btnToFinal">この設定で本番へ <span class="t">1344×768</span></button>
       </div>
     </div>
