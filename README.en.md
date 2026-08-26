@@ -18,7 +18,7 @@ Japanese documentation: [README.md](README.md) — it is the primary document an
 |---|---|
 | **ComfyUI** | 0.33 or later (the version that ships `MiniMaxH3ReferenceToVideo` and `SAM3_Detect` in core). Default `http://127.0.0.1:8189` |
 | **MiniMax-H3 weights** | UNET / Turbo LoRA / text encoder / video VAE / audio VAE. **Not bundled** — see License below |
-| **An H3 workflow JSON** | Saved from ComfyUI after running H3 once. The app reads only model names, sampler and output format from it |
+| **An H3 workflow JSON** | **`workflows/emaki_h3_ref2va.json` is included** (see "Getting a workflow" below). The app reads only model names, sampler and output format from it, and **builds the graph it actually runs itself** |
 | **Python** | 3.10+, with `fastapi` and `uvicorn` (`pip install -r requirements.txt`). `python-multipart` is **optional** — install it to drag reference material in from the file manager. **Without it the app still starts and everything else works** |
 | **ffmpeg** | On PATH (used to inspect results, and to make thumbnails for reference videos) |
 | **LM Studio** (optional) | For writing prompts locally. Default `http://localhost:1234`; the `lms` CLI is also used. Not needed if you use a cloud LLM |
@@ -59,6 +59,36 @@ python server.py --port 8799
 ```
 
 The UI opens even when LM Studio and ComfyUI are down — missing pieces show up in red under Settings.
+
+## Getting a workflow
+
+The app **does not run your workflow.** It reads three things from it, and `comfy.py` builds the graph it executes from scratch every time:
+
+- the five weight filenames (UNET / Turbo LoRA / text encoder / video VAE / audio VAE)
+- sampler, scheduler and step count
+- how reference videos are loaded (fps, format) and the output format
+
+**Point it at the included `workflows/emaki_h3_ref2va.json` and you are done.**
+
+```json
+"workflow_json": "workflows/emaki_h3_ref2va.json"
+```
+
+That file is ComfyUI's own template `video_minimax_h3_r2v.json` (MIT) with **only the sampler changed** to the values this app measured:
+
+| | Official template | Included sample | Why |
+|---|---|---|---|
+| Sampler | `res_multistep` | **`euler`** | measured, with the Turbo LoRA |
+| Scheduler | `simple` | **`normal`** | same |
+| Steps | `20` | **`6`** | the Turbo LoRA is built for 4–6 steps |
+
+**The weight filenames are the official ones.** If you use a different quantisation (`fp8_scaled`, say), section W under Settings turns red — point at your own workflow, or edit the names in the included JSON.
+
+### Using your own workflow
+
+Open **Workflow → Templates → Video → MiniMax H3 Reference to Video** in ComfyUI, **set the sampler to `euler` / `normal` / 6 steps**, save it, and point `workflow_json` at that file. ComfyUI defaults to 20 steps — **leave it and every clip takes three times longer.**
+
+**Cutting out subjects (SAM3) has nothing to do with your workflow.** The app builds that graph itself. All it needs is the `SAM3_Detect` node in ComfyUI and a checkpoint under `models/checkpoints/sam3/`.
 
 ### If you use the ComfyUI portable build
 

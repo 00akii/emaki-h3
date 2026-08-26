@@ -19,7 +19,8 @@ from h3studio import config as C  # noqa: E402
 EXAMPLE_PATHS = {
     "comfy_input_dir": "C:/ComfyUI/input",
     "comfy_output_dir": "C:/ComfyUI/output",
-    "workflow_json": "C:/ComfyUI/user/default/workflows/video_minimax_h3_i2v.json",
+    # 同梱のサンプル。これをそのまま指せば動く（README「ワークフローを用意する」）
+    "workflow_json": "workflows/emaki_h3_ref2va.json",
     "prompt_txt": "C:/ComfyUI/output/MiniMax-H3/prompt.txt",
     "archive_dir": "C:/ComfyUI/output/MiniMax-H3/archive",
     "raw_dir": "C:/art/reference",

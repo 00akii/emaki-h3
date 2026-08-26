@@ -29,7 +29,7 @@ English: [README.en.md](README.en.md)
 |---|---|
 | **ComfyUI** | 0.33 以降（`MiniMaxH3ReferenceToVideo` と `SAM3_Detect` が本体に入ったバージョン）。既定 `http://127.0.0.1:8189` |
 | **MiniMax-H3 の重み** | UNET / Turbo LoRA / テキストエンコーダ / 映像 VAE / 音声 VAE。**ライセンスの都合で同梱しません**（下記「公開にあたって」） |
-| **H3 のワークフロー JSON** | ComfyUI で一度動かして保存したもの。アプリはここからモデル名・サンプラー・出力形式だけを読む |
+| **H3 のワークフロー JSON** | **`workflows/emaki_h3_ref2va.json` を同梱しています**（下記「ワークフローを用意する」）。アプリはここからモデル名・サンプラー・出力形式だけを読み、**実行するグラフは自前で組みます** |
 | **Python** | 3.10 以降。`fastapi` と `uvicorn` が要ります（`pip install -r requirements.txt`）。`python-multipart` は**任意**で、入れるとエクスプローラーから参照素材をドロップして取り込めます。**無くてもアプリは起動し、他の機能はそのまま使えます** |
 | **ffmpeg** | PATH に通っていること（結果の検査と、参照動画のサムネイル作成に使う） |
 | **LM Studio**（任意） | ローカルでプロンプトを書かせる場合。既定 `http://localhost:1234`。CLI `lms` も使う。クラウド LLM を使うなら不要 |
@@ -70,6 +70,36 @@ python server.py --port 8799
 ```
 
 LM Studio と ComfyUI が無くても画面は開き、「設定」に赤で出ます。
+
+## ワークフローを用意する
+
+アプリは**ワークフローを実行しません。**読むのは次の3つだけで、実行するグラフは `comfy.py` が毎回自前で組み立てます。
+
+- 重み5つのファイル名（UNET / Turbo LoRA / テキストエンコーダ / 映像 VAE / 音声 VAE）
+- サンプラー・スケジューラ・ステップ数
+- 参照動画の読み方（fps・形式）と出力形式
+
+**同梱の `workflows/emaki_h3_ref2va.json` をそのまま指せば動きます。**
+
+```json
+"workflow_json": "workflows/emaki_h3_ref2va.json"
+```
+
+これは **ComfyUI 公式のワークフローテンプレート `video_minimax_h3_r2v.json`（MIT）を元に、サンプラーだけ実測値へ変えたもの**です。
+
+| | 公式テンプレート | 同梱サンプル | 理由 |
+|---|---|---|---|
+| サンプラー | `res_multistep` | **`euler`** | Turbo LoRA 前提の実測値 |
+| スケジューラ | `simple` | **`normal`** | 同上 |
+| ステップ | `20` | **`6`** | Turbo LoRA は 4〜6 step 用。20 は時間の無駄 |
+
+**重みのファイル名は公式テンプレートのままです。**別の量子化（`fp8_scaled` など）を使っている場合は、「設定」→ W の欄が赤くなるので、自分のワークフローを指すか、同梱の JSON を開いて名前を合わせてください。
+
+### 自分のワークフローを使う場合
+
+ComfyUI の **ワークフロー → テンプレート → 動画 → MiniMax H3 Reference to Video** を開き、**サンプラーを `euler` / `normal` / 6 step に変えてから**保存して、そのパスを指してください。ComfyUI の既定は 20 step のままなので、**変えないと1本あたり3倍以上かかります。**
+
+**切り抜き（SAM3）はワークフローと無関係です。**アプリが自前でグラフを組むので、ワークフローに SAM3 を入れる必要はありません。必要なのは ComfyUI 側に `SAM3_Detect` ノードと `models/checkpoints/sam3/` のチェックポイントがあることだけです。
 
 ### ComfyUI のポータブル版を使っている場合
 

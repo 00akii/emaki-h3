@@ -118,6 +118,12 @@ def load() -> dict:
         with open(path, encoding="utf-8") as f:
             _deep_update(cfg, json.load(f))
     cfg["_source"] = path
+    # 同梱の `workflows/emaki_h3_ref2va.json` のような**相対パスは、アプリの場所を基準に解決する。**
+    # カレントディレクトリ基準のままだと、`start.bat` 以外の起動（別の場所から `python app/server.py`、
+    # サービス化、IDE から実行）で見つからなくなる。絶対パスで書かれていればそのまま使う
+    p = cfg.get("workflow_json") or ""
+    if p and not os.path.isabs(p):
+        cfg["workflow_json"] = os.path.normpath(os.path.join(APP_DIR, p))
     return cfg
 
 

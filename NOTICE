@@ -11,6 +11,13 @@ Not included, and not covered by it:
 
 You obtain and run these yourself. See "必要なもの" / "What you need" in README.
 
+Included, and covered by its own MIT licence:
+
+- **`workflows/emaki_h3_ref2va.json`** — derived from ComfyUI's official workflow template
+  `video_minimax_h3_r2v.json` (the `comfyui-workflow-templates` package, MIT).
+  Only the sampler settings were changed: `res_multistep`/`simple`/20 steps → `euler`/`normal`/6 steps,
+  to match the Turbo LoRA this app assumes. Everything else is unmodified.
+
 ---
 
 絵巻H3 / Emaki H3 — 注記
@@ -24,3 +31,10 @@ You obtain and run these yourself. See "必要なもの" / "What you need" in RE
 - **ComfyUI**、**LM Studio**、**Eagle** — それぞれ各自のライセンス。
 
 これらは使う方がご自身で用意します。README の「必要なもの」を見てください。
+
+同梱しており、それ自身の MIT ライセンスに従うもの:
+
+- **`workflows/emaki_h3_ref2va.json`** — ComfyUI 公式のワークフローテンプレート
+  `video_minimax_h3_r2v.json`（`comfyui-workflow-templates` パッケージ・MIT）から作りました。
+  変えたのはサンプラーの設定だけです（`res_multistep`/`simple`/20 step →
+  `euler`/`normal`/6 step。このアプリが前提にしている Turbo LoRA に合わせるため）。ほかは無改変です。
