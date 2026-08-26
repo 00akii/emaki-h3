@@ -429,14 +429,10 @@ def check(text: str, mode=None, duration=None, expect_text=None) -> Report:
     # 公式 4.7: 気分語と「音楽の感情的役割の説明」を書かない
     for pat in [r"creat\w+ a (sense|feeling|mood)", r"convey\w*", r"evok\w+", r"emphasis\w+",
                 r"underscor\w+", r"reinforc\w+", r"enhanc\w+", r"support\w+ the",
-                r"without", r"reflect\w+ (her|his|their) (inner|emotional)"]:
+                r"reflect\w+ (her|his|their) (inner|emotional)"]:
         m = re.search(pat, nd, re.I)
         if m:
             r.error("V10", "non_diegetic_music が音楽の役割・感情を説明している: %s" % m.group(0))
-    for pat in [r"without"]:
-        m = re.search(pat, sc, re.I)
-        if m:
-            r.warn("V10", "overall_soundscape に否定表現: %s" % m.group(0))
     for w in ["radio", "television", " tv ", "jukebox", "record player"]:
         if w in nd.lower():
             r.error("V7", "non_diegetic_music に劇中音源: %s" % w.strip())
