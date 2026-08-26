@@ -13,7 +13,7 @@
 """
 from __future__ import annotations
 import io, json, os, re, sys, time, glob, mimetypes
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import FastAPI, HTTPException, Body, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
@@ -575,11 +575,49 @@ def history_item(archive_name: str):
 
 # ---------------- 段4: 生成投入・進捗・結果 ----------------
 
+# seed の範囲。**ComfyUI の `RandomNoise` は `min=0`／`max=2**64-1`** だが、上限はここで 2**53-1 に絞る。
+# 理由: 画面が JavaScript の Number で持つので、`Number.MAX_SAFE_INTEGER`（2**53-1）を超えると
+# **黙って値が化ける**（実測: 12345678901234567890 → 12345678901234567000）。
+# 渡せない範囲を「渡せる顔」で見せないため、アプリ側の上限をブラウザ側に合わせる。
+SEED_MIN = 0
+SEED_MAX = 2 ** 53 - 1          # 9,007,199,254,740,991
+
+
+def resolve_seed(v):
+    """未指定なら 1。`"random"` なら乱数。範囲外は 400 で止める。
+
+    **負の数は ComfyUI に渡してはいけない。** `noise_seed` は `min=0` なので、
+    投げると `/prompt` が 400（`value_smaller_than_min`）を返し、**英語の検証エラーがそのまま画面に出る。**
+    2026-08-26 にユーザーが `-1` で踏んだ。ComfyUI の GUI は「seed=-1」ではなく
+    `control_after_generate: randomize` でランダム化しているので、**-1 という約束は最初から無い。**
+
+    **0 は有効。**（`RandomNoise` の `default` が 0）。画面側で `parseInt(v) || null` と書くと
+    **0 が falsy で潰れて 1 になる**ので、そちらも直してある。
+    """
+    if isinstance(v, str) and v.strip().lower() in ("random", "rand", "ランダム"):
+        import secrets
+        return secrets.randbelow(SEED_MAX + 1)
+    if v is None:
+        return 1
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "seed は整数で指定してください（0〜%d、空欄なら 1、'random' でランダム）" % SEED_MAX)
+    if n < SEED_MIN:
+        raise HTTPException(400, "seed に負の数は使えません（%d を受け取りました）。"
+                                 "ComfyUI の noise_seed は 0 以上です。"
+                                 "毎回変えたいなら seed 欄を「ランダム」にしてください" % n)
+    if n > SEED_MAX:
+        raise HTTPException(400, "seed が大きすぎます（上限 %d）。"
+                                 "これを超えるとブラウザ側で値が化けるため受け付けません" % SEED_MAX)
+    return n
+
+
 class GenerateReq(BaseModel):
     project: str
     prompt: str
     mode: str = "preview"                # preview | final
-    seed: Optional[int] = None
+    seed: Optional[Union[int, str]] = None      # 数値／未指定（=1）／"random"
     duration: int = 8
     ratio: str = "16:9"
     images: list[str] = []
@@ -624,7 +662,7 @@ def generate(req: GenerateReq):
     w, h = comfy.size_for(c, req.mode, req.ratio)
     gmode = c["gen"].get(req.mode) or {}
     prefix = gmode.get("filename_prefix") or ("MiniMax_H3" if req.mode == "final" else "MiniMax-H3/preview/MiniMax_H3")
-    seed = req.seed if req.seed is not None else 1
+    seed = resolve_seed(req.seed)
     params = {"project": req.project, "shot_id": req.shot_id, "prompt": req.prompt, "mode": req.mode, "seed": int(seed),
               "duration": dur, "length": length, "ratio": req.ratio, "width": w, "height": h,
               "images": req.images, "videos": req.videos, "h3_mode": req.h3_mode or ("ref2va" if (req.images or req.videos) else "t2va"),

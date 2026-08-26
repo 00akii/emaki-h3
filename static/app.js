@@ -513,7 +513,30 @@
 
   // ---------- ブリーフ → プロンプト ----------
   const fields = () => state.mode === "A" ? { text: $("aText").value } : state.mode === "C" ? { raw: $("cRaw").value } : { place: $("bPlace").value, motion: $("bMotion").value, framing: $("bFraming").value, camera: $("bCamera").value, text: $("bText").value, dialogue: $("bDialogue").value };
-  const genBody = (extra = {}) => Object.assign({ project: state.projName, mode: state.mode, fields: fields(), images: [...state.images], videos: [...state.videos], duration: parseInt($("duration").value), ratio: $("ratio").value, seed: parseInt($("seed").value) || null, tries: 3, confirm_cloud: state.cloud && state.cloudOk }, extra);
+  // **seed は `parseInt(v) || null` で読んではいけない。** 0 が falsy で潰れて既定の 1 になり、
+  // **ComfyUI の既定値である 0 が指定できなくなる**（2026-08-26 に発覚）。
+  // 空欄は null（サーバー側で 1）、それ以外は数値として渡し、負の数や範囲外はサーバーが 400 で止める。
+  const SEED_MAX = Number.MAX_SAFE_INTEGER;            // 2**53-1。ComfyUI の上限は 2**64-1 だが、
+                                                       // ここを超えると Number が黙って値を化けさせる
+  function readSeed() {
+    const raw = String($("seed").value || "").trim();
+    if (!raw) return null;                             // 空欄 → サーバーが 1 にする
+    if (/^(random|rand|ランダム)$/i.test(raw)) return "random";
+    const n = Number(raw);
+    if (!Number.isInteger(n)) { toast("seed は整数で入れてください", "warn"); return null; }
+    if (n < 0) { toast("seed に負の数は使えません。毎回変えたいなら「ランダム」を押してください", "warn"); return null; }
+    if (n > SEED_MAX) { toast("seed が大きすぎます（上限 " + SEED_MAX + "）", "warn"); return null; }
+    return n;
+  }
+  $("btnSeedRand").onclick = () => {
+    // 具体的な数字を入れる。**ComfyUI に -1 を渡すのではない**（noise_seed は min=0 で、-1 は 400 になる）。
+    // 数字にしておけば結果カードとジョブ記録に残り、良かった回をあとで再現できる
+    const n = Math.floor(Math.random() * (SEED_MAX + 1));
+    $("seed").value = n;
+    toast("seed を " + n + " にしました");
+  };
+
+  const genBody = (extra = {}) => Object.assign({ project: state.projName, mode: state.mode, fields: fields(), images: [...state.images], videos: [...state.videos], duration: parseInt($("duration").value), ratio: $("ratio").value, seed: readSeed(), tries: 3, confirm_cloud: state.cloud && state.cloudOk }, extra);
 
   $("btnExpand").onclick = async () => {
     if (!$("aText").value.trim()) return toast("1行を入れてください", "warn");
@@ -549,7 +572,7 @@
     finally { stopTimer(); $("btnGen").disabled = false; }
   }
   $("btnGen").onclick = () => generate();
-  $("btnRetry").onclick = () => { const s = (parseInt($("seed").value) || 0) + 1; $("seed").value = s; generate(s); };
+  $("btnRetry").onclick = () => { const c = readSeed(); const s = (typeof c === "number" ? c : 0) + 1; $("seed").value = s; generate(s); };
 
   function renderLint(l) {
     const b = $("lintBadges"); const list = $("lintList");
@@ -567,7 +590,7 @@
     const j = await api("/api/prompt/write", { method: "POST", body: JSON.stringify({ prompt: p, archive_name: name }) });
     $("foot").innerHTML = j.written.map(w => `<span>書き出し <code>${esc(w)}</code></span>`).join("");
     // project.shots に追記
-    const shot = { id: $("shotId").textContent, archive_name: name, brief: state.mode === "B" ? fields() : { mode: state.mode, ...fields() }, mode: state.h3mode, duration: parseInt($("duration").value), ratio: $("ratio").value, seed: parseInt($("seed").value) || null, images: [...state.images], videos: [...state.videos], lint: state.lint ? { errors: state.lint.errors.length, warns: state.lint.warns.length, words: state.lint.words } : null };
+    const shot = { id: $("shotId").textContent, archive_name: name, brief: state.mode === "B" ? fields() : { mode: state.mode, ...fields() }, mode: state.h3mode, duration: parseInt($("duration").value), ratio: $("ratio").value, seed: readSeed(), images: [...state.images], videos: [...state.videos], lint: state.lint ? { errors: state.lint.errors.length, warns: state.lint.warns.length, words: state.lint.words } : null };
     state.project.shots = state.project.shots || []; state.project.shots.push(shot);
     await api("/api/projects/" + encodeURIComponent(state.projName), { method: "PUT", body: JSON.stringify(state.project) });
     $("shotId").textContent = nextShotId(state.project);
@@ -608,7 +631,7 @@
     const p = extra.prompt != null ? extra.prompt : $("promptBox").value; if (!p.trim()) return toast("プロンプトが空です。先に生成するか、履歴から呼び出してください", "warn");
     if (!state.projName && !extra.project) return toast("作品を選んでください", "warn");
     if (extra.prompt == null && state.lint && state.lint.errors && state.lint.errors.length && !extra.force) { if (!confirm("リンターの ERROR が " + state.lint.errors.length + " 件残っています。このまま生成しますか？")) return; }
-    const body = Object.assign({ project: state.projName, prompt: p, mode, seed: parseInt($("seed").value) || 1, duration: parseInt($("duration").value), ratio: $("ratio").value,
+    const body = Object.assign({ project: state.projName, prompt: p, mode, seed: readSeed(), duration: parseInt($("duration").value), ratio: $("ratio").value,
       images: [...state.images], videos: [...state.videos], shot_id: $("shotId").textContent, h3_mode: state.h3mode, brief: state.mode === "B" ? fields() : { mode: state.mode, ...fields() } }, extra);
     delete body.force;
     resetSteps(); $("log").textContent = "待機中"; logShown = 0; $("progStep").textContent = ""; startTimer(); setBusy(true);
