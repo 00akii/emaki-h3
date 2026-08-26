@@ -249,3 +249,4 @@ python tools/validate_graph.py
 
 - **The app is MIT** — see [LICENSE](LICENSE)
 - **MiniMax-H3 weights are not bundled.** They are covered by the **MiniMax H3 Community License** (separate permission required in the US/EU/UK/South Korea). ComfyUI, LM Studio and Eagle are not bundled either. **See [NOTICE](NOTICE) for what is excluded and under which terms**
+- **⚠ Before publishing generated videos, please read [docs/LICENSE-NOTES.en.md](docs/LICENSE-NOTES.en.md).** It covers three points we noticed only after publishing: the territory restriction appears to extend to **Outputs**, there is an obligation to **disclose machine-generated content**, and the scope of the safeguard clause is unclear (**inquiry sent to MiniMax, awaiting reply**)
