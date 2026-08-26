@@ -19,8 +19,8 @@ Japanese documentation: [README.md](README.md) — it is the primary document an
 | **ComfyUI** | 0.33 or later (the version that ships `MiniMaxH3ReferenceToVideo` and `SAM3_Detect` in core). Default `http://127.0.0.1:8189` |
 | **MiniMax-H3 weights** | UNET / Turbo LoRA / text encoder / video VAE / audio VAE. **Not bundled** — see License below |
 | **An H3 workflow JSON** | Saved from ComfyUI after running H3 once. The app reads only model names, sampler and output format from it |
-| **Python** | 3.10+, with `fastapi` and `uvicorn` |
-| **ffmpeg** | On PATH (used to inspect results) |
+| **Python** | 3.10+, with all three of `fastapi`, `uvicorn` and `python-multipart`. **The app will not start without `python-multipart`** (you get `Form data requires "python-multipart" to be installed`). It is used to drop reference material in from the file manager |
+| **ffmpeg** | On PATH (used to inspect results, and to make thumbnails for reference videos) |
 | **LM Studio** (optional) | For writing prompts locally. Default `http://localhost:1234`; the `lms` CLI is also used. Not needed if you use a cloud LLM |
 | **Eagle** (optional) | To file finished videos |
 

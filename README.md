@@ -30,8 +30,8 @@ English: [README.en.md](README.en.md)
 | **ComfyUI** | 0.33 以降（`MiniMaxH3ReferenceToVideo` と `SAM3_Detect` が本体に入ったバージョン）。既定 `http://127.0.0.1:8189` |
 | **MiniMax-H3 の重み** | UNET / Turbo LoRA / テキストエンコーダ / 映像 VAE / 音声 VAE。**ライセンスの都合で同梱しません**（下記「公開にあたって」） |
 | **H3 のワークフロー JSON** | ComfyUI で一度動かして保存したもの。アプリはここからモデル名・サンプラー・出力形式だけを読む |
-| **Python** | 3.10 以降。`fastapi` `uvicorn` |
-| **ffmpeg** | PATH に通っていること（結果の検査に使う） |
+| **Python** | 3.10 以降。`fastapi` `uvicorn` `python-multipart` の3つ。**`python-multipart` が無いと起動しません**（`Form data requires "python-multipart" to be installed` が出ます）。参照素材をエクスプローラーから落として取り込むために使います |
+| **ffmpeg** | PATH に通っていること（結果の検査と、参照動画のサムネイル作成に使う） |
 | **LM Studio**（任意） | ローカルでプロンプトを書かせる場合。既定 `http://localhost:1234`。CLI `lms` も使う。クラウド LLM を使うなら不要 |
 | **Eagle**（任意） | 出来上がりを登録する場合 |
 
