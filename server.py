@@ -23,6 +23,7 @@ from pydantic import BaseModel
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, APP_DIR)
 from h3studio import config, project, llm, brief as briefmod, promptgen, comfy, gpu, cut, eagle, textcheck  # noqa: E402
+from h3studio import thumbs  # noqa: E402
 from h3studio import inspect as inspectmod  # noqa: E402
 
 app = FastAPI(title="Emaki H3", version="0.1.0")
@@ -178,6 +179,21 @@ def _safe_join(base: str, name: str) -> str:
 @app.get("/api/file/input/{name}")
 def file_input(name: str):
     return FileResponse(_safe_join(cfg()["comfy_input_dir"], name))
+
+
+@app.get("/api/thumb/video/{name}")
+def thumb_video(name: str):
+    """参照動画の静止サムネイル（先頭フレーム）。**エクスプローラーと同じ絵にしてある**（`thumbs.py` 参照）。
+
+    ここで JPEG を返すのは、動画そのものを 20 本ぶん読ませないため。
+    Starlette 0.37 の FileResponse は Range に応えないので、`<video preload>` を並べると
+    ブラウザが全長を取りに行く（実測: 1 本 2.6MB → 20 本で 52MB）。
+    ホバーで 1 本だけ `<video>` を差し込む今の作りなら、その 1 本しか読まない。
+    """
+    p = thumbs.video_thumb(_safe_join(cfg()["comfy_input_dir"], name))
+    if not p:
+        raise HTTPException(404, "サムネイルを作れません（ffmpeg が無いか、動画を読めません）")
+    return FileResponse(p, media_type="image/jpeg")
 
 
 @app.get("/api/file/raw/{name}")

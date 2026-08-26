@@ -266,7 +266,22 @@
     const vb = $("vidRefs"); vb.innerHTML = "";
     vi.items.slice(0, 20).forEach(it => {
       const b = document.createElement("button"); b.className = "ref vid" + (state.videos.has(it.name) ? " on" : ""); b.title = it.name;
-      b.innerHTML = `<span class="chk">✓</span><div style="height:62px;background:#2b3a44"></div><span>${esc(it.name.replace(/\.(mp4|webm|mov)$/i, ""))}</span>`;
+      // 静止時は先頭フレーム（= エクスプローラーと同じ絵）。ホバーしたときだけ実物を読んで再生する。
+      // 全部を <video> にすると、Range 非対応のため 1 本 2.6MB × 20 本を読みに行く（h3studio/thumbs.py 参照）
+      b.innerHTML = `<span class="chk">✓</span><img loading="lazy" src="/api/thumb/video/${encodeURIComponent(it.name)}" alt=""><span>${esc(it.name.replace(/\.(mp4|webm|mov)$/i, ""))}</span>`;
+      b.onmouseenter = () => {
+        if (b.querySelector("video")) return;
+        const im = b.querySelector("img"); if (!im) return;
+        const v = document.createElement("video");
+        v.src = "/api/file/input/" + encodeURIComponent(it.name);
+        v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto";
+        im.style.display = "none"; im.insertAdjacentElement("afterend", v);
+        v.play().catch(() => { v.remove(); im.style.display = ""; });   // 再生できなければ静止画に戻す
+      };
+      b.onmouseleave = () => {
+        const v = b.querySelector("video"); if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.remove(); }
+        const im = b.querySelector("img"); if (im) im.style.display = "";
+      };
       b.onclick = () => { if (state.videos.has(it.name)) state.videos.delete(it.name); else { if (state.videos.size >= 3) return toast("動画は3本まで", "warn"); state.videos.add(it.name); } b.classList.toggle("on"); updateCounts(); };
       vb.appendChild(b);
     });

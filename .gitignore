@@ -4,6 +4,7 @@ config.json
 # 実行時に増えるもの
 jobs/
 cutcache/
+thumbcache/
 usage.json
 server.log
 server.err.log
