@@ -6,3 +6,8 @@
 *.png binary
 *.jpg binary
 *.mp4 binary
+
+# .bat は例外で CRLF 固定（2026-08-26）。
+# cmd.exe は改行・BOM・コードページのバイト列そのもので挙動が決まる。LF 単独でも動く環境はあるが
+# goto を使うと顕在化する既知の問題があるため、配布物は CRLF に寄せる（start.bat の正本参照）。
+*.bat text eol=crlf

@@ -1,43 +1,46 @@
 @echo off
 rem ---------------------------------------------------------------
-rem  絵巻H3 / Emaki H3 — ダブルクリックで起動する
+rem  Emaki H3 - double-click to start.
 rem
-rem  コマンドプロンプトを開かなくても使えるようにするためのもの。
-rem  Python を順に探し、見つからなければ「どうすればいいか」を出して止まる。
-rem  黙って閉じないこと（エラーを読む前に窓が消えるのが一番困る）。
+rem  ASCII ONLY. Do not put Japanese text in this file.
+rem  cmd reads .bat in the system codepage (CP932 on Japanese Windows),
+rem  where some characters have 0x5C or 0x7C as their second byte and
+rem  break the line. See README for the Japanese instructions.
 rem ---------------------------------------------------------------
-chcp 65001 >nul
 cd /d "%~dp0"
 
-rem --- Python を探す。EMAKI_PYTHON で明示指定もできる ---
+rem --- find a Python. EMAKI_PYTHON overrides the search ---
 set "PY="
 if defined EMAKI_PYTHON if exist "%EMAKI_PYTHON%" set "PY=%EMAKI_PYTHON%"
 if not defined PY where py >nul 2>&1 && set "PY=py -3"
 if not defined PY where python >nul 2>&1 && set "PY=python"
-rem ComfyUI のポータブル版の隣に置いた場合。埋め込み Python は PATH に居ない
+rem ComfyUI portable ships its own Python, which is not on PATH
 if not defined PY if exist "..\python_embeded\python.exe" set "PY=..\python_embeded\python.exe"
 if not defined PY if exist "..\..\python_embeded\python.exe" set "PY=..\..\python_embeded\python.exe"
 
 if not defined PY (
   echo.
-  echo   Python が見つかりませんでした。
+  echo   Python was not found.
   echo.
-  echo   ComfyUI のポータブル版をお使いなら、その中の Python を指定できます:
+  echo   Using the ComfyUI portable build? Point this script at its Python:
   echo       set EMAKI_PYTHON=C:\...\ComfyUI_windows_portable\python_embeded\python.exe
   echo       start.bat
   echo.
-  echo   入っていない場合は https://www.python.org/downloads/ から 3.10 以降を入れてください。
-  echo   インストール時に「Add Python to PATH」にチェックを入れると、この探索で見つかります。
+  echo   Otherwise install Python 3.10 or later from
+  echo       https://www.python.org/downloads/
+  echo   and tick "Add Python to PATH" during setup.
+  echo.
+  echo   README.md has the same steps in Japanese.
   echo.
   pause
   exit /b 1
 )
 
-rem --- 必要なパッケージが入っているか ---
+rem --- are the packages installed? ---
 %PY% -c "import fastapi, uvicorn" >nul 2>&1
 if errorlevel 1 (
   echo.
-  echo   必要なパッケージが入っていません。次を実行してください:
+  echo   Required packages are missing. Run:
   echo.
   echo       %PY% -m pip install -r requirements.txt
   echo.
@@ -45,12 +48,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo 絵巻H3 を起動します（%PY%）。ブラウザで http://127.0.0.1:8765 を開いてください。
-echo この窓を閉じるとアプリも止まります。
+echo Starting Emaki H3 with %PY%
+echo Open http://127.0.0.1:8765 in your browser.
+echo Closing this window stops the app.
 echo.
 %PY% server.py %*
 
-rem 落ちたときに理由を読めるよう、閉じずに待つ
+rem keep the window so the reason stays readable if it crashes
 echo.
-echo アプリが終了しました。
+echo Emaki H3 has stopped.
 pause
