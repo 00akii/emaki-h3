@@ -56,7 +56,7 @@
             <b>どこで・いつ・何でできているか</b>を書く。素材名（コンクリート／鉄／硝子／木）を1つ入れると画が締まる。
             <span class="ex">夕立のあとの夕方、学校の屋上。濡れたコンクリート</span>
             <span class="ex">夜の自室。木の机と紙のノート、硝子のコップ</span>
-            <span class="why">参照画像の背景が漏れるのを、新しい場所の具体物で押し返す（実測 R9）。<span class="bad">幻想的な雰囲気の場所</span> は画に落ちない。</span>
+            <span class="why">参照画像の背景が漏れるのを、新しい場所の具体物で押し返す（実測）。<span class="bad">幻想的な雰囲気の場所</span> は画に落ちない。</span>
           </div>
         </div></div>
       <div class="field"><label class="req">動き<button class="q on" data-help="helpMotion">?</button></label>
@@ -67,7 +67,7 @@
             <b>順番どおりに区切って書く。</b>3〜5段階が目安。最後に止まる状態まで書く。
             <span class="ex">机に座っている 顔を上げる 立ち上がる 鞄を肩にかける</span>
             <span class="why"><b>区切りは打ちやすいもので構いません</b> — スペース・読点「、」・ハイフン「-」・改行・矢印「→」のどれでも同じに扱います（上に解釈結果が出ます）。<br>
-            動きの質は参照動画ではなく<b>この文章</b>で決まる（実測 R5）。<span class="bad">自然に動く</span> <span class="bad">いい感じに</span> は何も渡らない。</span>
+            動きの質は参照動画ではなく<b>この文章</b>で決まる（実測）。<span class="bad">自然に動く</span> <span class="bad">いい感じに</span> は何も渡らない。</span>
           </div>
         </div></div>
       <div class="field"><label>開始の構図<button class="q" data-help="helpFram">?</button></label>
@@ -75,7 +75,7 @@
           <div class="row" id="framChips" style="margin-bottom:6px"></div>
           <input class="in mini" id="bFraming" placeholder="空欄なら LLM が選ぶ（たいてい全身の引き）">
           <div class="hint" id="framingCheck"></div>
-          <div class="help hidden" id="helpFram"><b>1フレーム目の構図</b>。高さ（目線／ハイ／ロー）と視点（正面／真横／背面）は確実に効く。<b>寄り</b>（胸から上より近い）を選んでカメラが引かない場合は、プロンプトの描写を画角内の要素に絞る修正が自動で入る（実測: 絞らないと×9、絞ると×0）。寄りから引く組み合わせは成立しにくいので警告が出る。<span class="bad">ダッチアングル・真俯瞰・望遠</span> は効かないので選択肢にない。</div>
+          <div class="help hidden" id="helpFram"><b>1フレーム目の構図</b>。高さ（目線／ハイ／ロー）と視点（正面／真横／背面）は確実に効く。<b>寄り</b>（胸から上より近い）を選んでカメラが引かない場合は、プロンプトの描写を画角内の要素に絞る修正が自動で入る（実測: 絞らないと×9、絞ると×0）。寄りから引く組み合わせは成立しにくいので警告が出る。<b>斜めに傾いた構図・広角・真俯瞰</b>も選べる。選ぶと、場面全体をその効果に矛盾しない世界として描く指示が自動で入る（これを入れないと効かない）。ただし<b>傾く向き・角度・誇張の強さは選べない</b>。<span class="bad">望遠の圧縮</span> だけは効かないので選択肢にない。</div>
         </div></div>
       <div class="field"><label>カメラ（終端）<button class="q on" data-help="helpCam">?</button></label>
         <div>

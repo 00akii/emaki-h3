@@ -134,7 +134,9 @@ Everything environment-specific lives in **`config.json`**; there are no paths i
    - **Camera means the END framing** — where the shot comes to rest (measured: direction correct 12/12). Empty means a static shot. **Prefer specifying push-in / pull-out here rather than in the opening framing**
    - **Opening framing** is frame 1. Height (eye level / high / low) and viewpoint (front / profile / behind) work by naming them.
      **Choosing a tight size also constrains the body text to what fits the frame** — without that constraint the prose wins and the size is silently ignored (measured: ×9 → ×0).
-     The verdict for your combination (pass / adjusted / unlikely to work) appears right under the field. **Options that do not work at all — dutch angle, top-down, telephoto, wide-angle — are not offered.**
+     The verdict for your combination (pass / adjusted / unlikely to work) appears right under the field.
+     **Dutch angle, top-down and wide-angle are also offered** (added 2026-08-27): picking one rewrites the whole scene description into a world consistent with that effect — the same mechanism as the size fix. **The direction, the angle and the strength cannot be chosen.**
+     **Only telephoto compression is not offered** — it does not work even when the whole scene is rewritten for it (measured).
    - **On-screen text** is writing on a sign, card or screen. Write it as `看板に「こんにちは」` — whatever is inside the quotes is reproduced verbatim, and anything before it names what carries the text.
      **Everyday kanji, kana and ASCII come out correctly** (measured 9/9). **Rare kanji and old variant forms are silently replaced by a different real character**, so the app classifies the input and warns
    - **Separate motion beats however you like** — spaces, commas, hyphens, newlines or arrows all work; the app normalizes to `A → B → C` and shows you how it parsed the line right below the field
