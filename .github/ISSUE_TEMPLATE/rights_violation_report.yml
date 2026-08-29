@@ -1,0 +1,58 @@
+name: 権利侵害・ライセンスの懸念 / Rights or license concern
+description: 生成物・素材・依存コードなどについて、権利侵害やライセンス上の懸念を報告する / Report a suspected rights infringement or license issue
+title: "[rights] "
+labels: ["rights-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **公開の場で書きたくない内容がある場合は、この Issue ではなく非公開報告をお使いください。**
+        このリポジトリの **Security** タブ →「**Report a vulnerability**」から報告できます
+        （ボタンの表示名は「脆弱性の報告」ですが、権利侵害の報告にも使えます）。
+
+        **If you don't want to write this in public, please use private reporting instead of this Issue form.**
+        Go to this repository's **Security** tab → **"Report a vulnerability"**
+        (the button says "vulnerability" but it also covers rights/license reports).
+
+        日本語でも英語でもかまいません。/ Japanese or English is fine.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 何についての懸念か / What is this about
+      description: 対象物（生成物・同梱素材・依存コードなど）と、懸念の内容を具体的に。
+      placeholder: |
+        このリポジトリの workflows/emaki_h3_ref2va.json は ... のライセンスに反しているのではないか
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 種類 / Category
+      options:
+        - 生成物の権利（第三者の著作物・肖像など） / Rights in generated output (third-party work, likeness, etc.)
+        - 同梱素材・ワークフローのライセンス / License of bundled assets or workflows
+        - 依存コード・ライブラリのライセンス / License of dependency code or libraries
+        - MiniMax-H3 の利用条件 / MiniMax-H3 usage terms
+        - その他・わからない / Other or not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: basis
+    attributes:
+      label: 根拠 / Basis
+      description: 該当するライセンス条文・元の作品へのリンクなど、確認できるものがあれば。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 確認 / Confirmation
+      options:
+        - label: >-
+            公開の場で書きたくない内容ではないことを確認した（該当する場合は非公開報告を使った）
+            / Confirmed this is not something I'd rather report privately (if it was, I used private reporting instead)
+          required: true
