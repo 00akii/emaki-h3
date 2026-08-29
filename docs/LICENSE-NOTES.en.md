@@ -1,6 +1,6 @@
 # About the MiniMax-H3 License — notes for Emaki H3 users
 
-> ## ⚠ Status: inquiry sent, awaiting reply (as of 2026-08-27)
+> ## ⚠ Status: inquiry sent, awaiting reply (V.4 still unresolved as of 2026-08-29)
 >
 > **What follows is our reading. It is not a settled interpretation, and it is not legal advice.**
 > We are not lawyers. We read the license text.
@@ -8,7 +8,11 @@
 > **We have sent an inquiry to MiniMax and have not yet received a reply. This document will be updated when we do.**
 >
 > **Please read the license text yourself, clause by clause.** Do not rely on this summary — including this one.
-> The license ships with the MiniMax-H3 model distribution.
+> The license ships with the MiniMax-H3 model distribution. **Links are under [Where the primary sources are](#where-the-primary-sources-are).**
+>
+> **Our reading may not be your reading. That is why you should check for yourself. Readings differ.**
+>
+> **This is not modesty.** We read the same text on 2026-08-25 and concluded nothing was needed; on 2026-08-27 we found what we had missed; on 2026-08-29 we changed our reading again. **The same team, the same text, three different readings in four days.**
 
 ## Why this document exists
 
@@ -22,7 +26,7 @@ We published a video first and re-read the license afterwards. **Three clauses g
 |---|---|---|
 | **V.4 / Exhibit A.1** | The territory restriction appears to extend to **Outputs** | **Inquiry pending** |
 | **Exhibit A.12** | Obligation to disclose machine-generated content **clearly and prominently** | Addressed without waiting |
-| **V.5** | Whether safeguard obligations apply to a local, non-hosted tool | **Inquiry pending** |
+| **V.5** | How far the safeguard and reporting obligations reach a locally-run tool | **The license text and MiniMax's own FAQ describe the scope differently** (see 3). **We have not decided; we took the widest reading** — reporting channel set up, **no technical safeguards** |
 
 ### 1. Territory restriction may extend to Outputs (V.4 / Exhibit A.1)
 
@@ -46,11 +50,43 @@ We now place this line directly under the video:
 
 **The same note is needed in the video platform's description field.** A video circulates on its own; a disclosure written in an article does not travel with it. **This is easy to miss.**
 
-### 3. Obligations for a non-hosted tool (V.5)
+### 3. Safeguards for whoever distributes the tool (V.5) — **the documents do not agree**
 
-**Section V.5** sets out safeguard obligations. Emaki H3 is **free, open source, and runs entirely on the user's own machine**. It neither bundles nor hosts the weights and provides no Hosted Service.
+**Section V.5 requires safeguards and a reporting channel from anyone who makes available to third parties something capable of generating Outputs with H3.**
 
-**We could not determine from the text whether V.5 applies in that case**, or — if it does — what would be proportionate for a small open-source project. **This is also part of our inquiry.**
+**Whether that reaches a locally-run tool like Emaki H3 is not something the documents we found agree on.** Rather than give you our reading, **here is what each one says.**
+
+| Document | What it says about the scope of V.5 |
+|---|---|
+| **The license text, V.5** | `a product, service, or Hosted Service` that permits the generation of Outputs — **three alternatives in parallel; it does not turn on whether you host** |
+| **MiniMax's own FAQ**<br>(`design.minimax.io/h3` EN / `design.minimaxi.com/h3` ZH) | **All three mentions are limited to hosting.** Q3: "**if you host H3 for others** you must implement reasonable content safeguards"; Q7: "**hosted-service obligations**"; Q12: "for anyone **hosting H3 as a service**". **The Chinese version reads the same way ("托管")** |
+
+**The contract does not draw the line at hosting; the same company's product page does.** We are not saying either is wrong — only that **a reader can reasonably arrive at different conclusions.**
+
+**⚠ The FAQ is not the contract.** On 2026-08-18, guidance given in the public license thread about attribution was **withdrawn by its own author as going beyond the license text.** The shape — an informal explanation narrower or broader than the clause — has already occurred once with this license. **That was one person posting in a forum; this is MiniMax's own product page, in two languages, in three places. Not the same thing — but not the contract either.**
+
+#### What we do
+
+**We do not have what we would need to decide this, so we have not decided it.**
+
+**What we did instead was take the widest reading.** Not "this might apply to us" but **"act as though it does."** That is why we set up a reporting channel without waiting for an answer. → **[Reporting Channel](./REPORTING.en.md)**
+
+**⚠ But that is as far as we got.** The clause also calls for **technical safeguards**, and **Emaki H3 has none.**
+It is open source that runs on the user's own machine, so **anything we put in, a user can take out.** Rather than ship something we could call a filter and have that claim turn false the moment someone switches it off, **we chose to say there is none.**
+
+**⚠ We are not claiming this satisfies V.5.** That is not ours to determine. **We are describing what we do.**
+
+#### One more thing worth knowing
+
+**MiniMax's model page describes automated moderation** ("Safety Guardrails"). **But it sits in the `H3-Context-IR` section, and that same section says:**
+
+> Because H3-Context-IR relies on a multi-stage workflow and multiple hosted models and services, **it is not included in this open-source release.**
+
+**And, in the same place:**
+
+> These guardrails **do not affect the Licensee's obligations** under the MiniMax H3 Community License.
+
+**In other words, the local path does not come with MiniMax's filtering.** MiniMax says so itself. **Emaki H3 does not provide a substitute for it either.**
 
 ## What Emaki H3 currently does
 
@@ -58,16 +94,39 @@ We now place this line directly under the video:
 - **States the Applicable Territory restriction in the README**
 - **Ships a NOTICE file** (III.4)
 - **Does not bundle or host the weights** — users obtain them from the official distribution
+- **A reporting channel** ([Reporting Channel](./REPORTING.en.md)) — Issues for reports that can be public, a private form for those that cannot
+
+**⚠ This is a list of what we do, not a determination that we have met an obligation.**
+
+## Where the primary sources are
+
+**This document is a summary. These are the originals.** We list only what we actually retrieved and read (**as of 2026-08-29**).
+
+| | |
+|---|---|
+| **The license text** | https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE |
+| **MiniMax's official FAQ** (13 entries) | https://design.minimax.io/h3 |
+| **MiniMax's own license Q&A** | https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/docs/QA-about-License.md |
+| **The public question thread** for license questions | https://huggingface.co/MiniMaxAI/MiniMax-H3/discussions/12 |
+| **Contact** | `api@minimax.io` (the address named in **IV.1** of the license) |
+
+**If you want to know the conditions for commercial use, read Q3 of the official FAQ, "Can I use it commercially?"** MiniMax sets out the conditions there in plain language. **That will be more accurate than any summary we could give you.**
+
+> **⚠ The FAQ is not the contract.** The license text is what binds. **There are places where the two are worded differently** (see 3 above).
+>
+> **⚠ Those pages change.** What we checked was the content **as of 2026-08-29**. **Read the version that exists when you read it.**
 
 ## If you are doing the same thing
 
-- **Read the license text end to end, following the clause numbers.** Do not read summaries — including this one
+- **Read the license text end to end, following the clause numbers.** Do not read summaries — including this one. **Links are under [Where the primary sources are](#where-the-primary-sources-are)**
 - Pay particular attention to anything mentioning **territory, Outputs, disclosure, and safeguards**, and apply it to your own use
 - **Read it before you publish.** We did it the other way round
-- **You can ask.** The license names a contact address
+- **You can ask.** `api@minimax.io` — the address named in IV.1. **There is also a public question thread**
 
 ---
 
 **Changelog**
 
 - 2026-08-27: First version (inquiry pending)
+- 2026-08-29: Section V.5 rewritten (license text and MiniMax's own FAQ set out side by side, with sources). Reporting channel added. **Primary-source links added** (the document previously contained no external links at all). **"Readings differ" added to the header.** **The V.5 "what we do" section rewritten** (we lack what we would need to decide → so we took the widest reading → but added no technical safeguards). **V.4 left unchanged**
+- 2026-08-30: Approved for publication by the author. Unpublished-draft banner removed

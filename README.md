@@ -317,5 +317,6 @@ python -m h3studio.config
 - **アプリは MIT。**
 - **MiniMax-H3 の重みは同梱しない。** ライセンスは **MiniMax H3 Community License**（US/EU/UK/韓国は個別許諾）。ComfyUI・LM Studio・Eagle も同梱しない。**同梱しないものの一覧と条件は [NOTICE](NOTICE) に**
 - **⚠ 生成した動画を公開する前に、[docs/ライセンスについて.md](docs/%E3%83%A9%E3%82%A4%E3%82%BB%E3%83%B3%E3%82%B9%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6.md) をお読みください。**地域制限が**生成物にも及ぶと読める**こと、**機械生成である旨の開示義務**があることなど、私たちが公開後に気づいた3点をまとめています（**MiniMax に照会中・回答待ち**）
+- **権利侵害やライセンス上の懸念に気づいたら、[docs/報告窓口.md](docs/%E5%A0%B1%E5%91%8A%E7%AA%93%E5%8F%A3.md) から報告してください。** 公開してよい内容は GitHub の Issue、公開したくない内容は非公開報告（Security タブの「Report a vulnerability」）が使えます。
 - `config.json` `jobs/` `cutcache/` `usage.json` `projects/` は `.gitignore` 済み。**作品データを一緒に公開したい場合だけ `projects/` の行を外す**
 - 数値はすべて上記「動作確認済み環境」の実測
